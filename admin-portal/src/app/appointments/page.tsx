@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Calendar, Filter, Search, Clock, User, Phone, Mail, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Filter, Search, Clock, User, Phone, Mail, CheckCircle2, XCircle, AlertCircle, FileText, Heart, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,14 +25,15 @@ import {
   StandardizedDialogDescription,
   StandardizedDialogHeader,
   StandardizedDialogTitle,
-  StandardizedDialogFooter,
   StandardizedDialogBody,
 } from '@/components/ui/standardized-dialog';
 import { Badge } from '@/components/ui/badge';
-import { getAllDocuments, updateAppointment } from '@/lib/firebase/firestore';
-import type { Appointment, AppointmentStatus } from '@/types';
+import { getAllDocuments, updateAppointment, getDocument } from '@/lib/firebase/firestore';
+import type { Appointment, UserProfile } from '@/types/firebase';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
+
+type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
 const statusColors: Record<AppointmentStatus, string> = {
   pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
@@ -57,6 +58,7 @@ export default function AppointmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedPatientProfile, setSelectedPatientProfile] = useState<UserProfile | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -72,21 +74,9 @@ export default function AppointmentsPage() {
     try {
       setLoading(true);
       const data = await getAllDocuments<Appointment>('appointments');
-      
-      const processedData = data.map(apt => ({
-        ...apt,
-        appointmentDate: apt.appointmentDate instanceof Timestamp 
-          ? apt.appointmentDate.toDate() 
-          : new Date(apt.appointmentDate),
-        createdAt: apt.createdAt instanceof Timestamp 
-          ? apt.createdAt.toDate() 
-          : new Date(apt.createdAt),
-        updatedAt: apt.updatedAt instanceof Timestamp 
-          ? apt.updatedAt.toDate() 
-          : new Date(apt.updatedAt),
-      }));
 
-      setAppointments(processedData);
+      // Data is already in the correct format from Firestore
+      setAppointments(data);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast.error('Failed to load appointments');
@@ -106,27 +96,46 @@ export default function AppointmentsPage() {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         apt =>
-          apt.patientName.toLowerCase().includes(term) ||
-          apt.patientEmail.toLowerCase().includes(term) ||
-          apt.providerName.toLowerCase().includes(term) ||
-          apt.serviceName.toLowerCase().includes(term)
+          (apt.userName && apt.userName.toLowerCase().includes(term)) ||
+          (apt.userEmail && apt.userEmail.toLowerCase().includes(term)) ||
+          (apt.providerName && apt.providerName.toLowerCase().includes(term)) ||
+          (apt.serviceName && apt.serviceName.toLowerCase().includes(term)) ||
+          (apt.confirmationNumber && apt.confirmationNumber.toLowerCase().includes(term))
       );
     }
 
     setFilteredAppointments(filtered);
   };
 
+  const loadPatientProfile = async (userId: string) => {
+    try {
+      const profile = await getDocument<UserProfile>('users', userId);
+      setSelectedPatientProfile(profile);
+    } catch (error) {
+      console.error('Error loading patient profile:', error);
+      // Don't show error toast - profile is optional
+      setSelectedPatientProfile(null);
+    }
+  };
+
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setDialogOpen(true);
+    // Load patient profile in background
+    await loadPatientProfile(appointment.userId);
+  };
+
   const handleStatusUpdate = async (appointmentId: string, newStatus: AppointmentStatus) => {
     try {
       setUpdating(true);
       await updateAppointment(appointmentId, { status: newStatus });
-      
+
       setAppointments(prev =>
         prev.map(apt =>
           apt.id === appointmentId ? { ...apt, status: newStatus } : apt
         )
       );
-      
+
       toast.success(`Appointment ${newStatus} successfully`);
       setDialogOpen(false);
     } catch (error) {
@@ -137,8 +146,9 @@ export default function AppointmentsPage() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: Date | Timestamp) => {
+    const dateObj = date instanceof Timestamp ? date.toDate() : date;
+    return dateObj.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
@@ -218,6 +228,7 @@ export default function AppointmentsPage() {
                 <TableHead>Service</TableHead>
                 <TableHead>Provider</TableHead>
                 <TableHead>Date & Time</TableHead>
+                <TableHead>Confirmation #</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -229,15 +240,15 @@ export default function AppointmentsPage() {
                   <TableRow key={appointment.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{appointment.patientName}</div>
+                        <div className="font-medium">{appointment.userName}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                           <Mail className="h-3 w-3" />
-                          {appointment.patientEmail}
+                          {appointment.userEmail}
                         </div>
-                        {appointment.patientPhone && (
+                        {appointment.userPhone && (
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
                             <Phone className="h-3 w-3" />
-                            {appointment.patientPhone}
+                            {appointment.userPhone}
                           </div>
                         )}
                       </div>
@@ -245,9 +256,6 @@ export default function AppointmentsPage() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{appointment.serviceName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {appointment.serviceDuration} minutes
-                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -266,6 +274,13 @@ export default function AppointmentsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="font-mono text-sm">
+                        {appointment.confirmationNumber || (
+                          <span className="text-muted-foreground italic">N/A</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline" className={statusColors[appointment.status]}>
                         <StatusIcon className="h-3 w-3 mr-1" />
                         {appointment.status}
@@ -275,10 +290,7 @@ export default function AppointmentsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setDialogOpen(true);
-                        }}
+                        onClick={() => handleAppointmentClick(appointment)}
                       >
                         Manage
                       </Button>
@@ -292,82 +304,276 @@ export default function AppointmentsPage() {
       )}
 
       <StandardizedDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <StandardizedDialogContent size="lg">
-          <StandardizedDialogHeader>
-            <StandardizedDialogTitle>Manage Appointment</StandardizedDialogTitle>
-            <StandardizedDialogDescription>
-              Update the status of this appointment
-            </StandardizedDialogDescription>
-          </StandardizedDialogHeader>
-
+        <StandardizedDialogContent size="3xl" className="max-h-[90vh] overflow-hidden flex flex-col p-0">
           {selectedAppointment && (
-            <StandardizedDialogBody>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Patient</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedAppointment.patientName}</p>
+            <>
+              {/* CRITICAL: Medical Alert Banner - Minimal, professional style */}
+              {selectedPatientProfile?.medicalHistory?.allergies && selectedPatientProfile.medicalHistory.allergies.length > 0 && (
+                <div className="bg-red-50 border-b border-red-200 px-6 py-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-red-900 mb-1">Allergies</p>
+                      <p className="text-sm text-red-800">
+                        {selectedPatientProfile.medicalHistory.allergies.join(', ')}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Service</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedAppointment.serviceName}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Date & Time</p>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {formatDate(selectedAppointment.appointmentDate)} at {formatTime(selectedAppointment.startTime)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Current Status</p>
-                  <Badge variant="outline" className={statusColors[selectedAppointment.status]}>
-                    {selectedAppointment.status}
-                  </Badge>
-                </div>
-              </div>
-            </StandardizedDialogBody>
-          )}
+              )}
 
-          <StandardizedDialogFooter>
-            {selectedAppointment?.status === 'pending' && (
-              <Button
-                onClick={() => handleStatusUpdate(selectedAppointment.id, 'confirmed')}
-                disabled={updating}
-                className="px-6"
-              >
-                Confirm
-              </Button>
-            )}
-            {(selectedAppointment?.status === 'pending' || selectedAppointment?.status === 'confirmed') && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => handleStatusUpdate(selectedAppointment.id, 'completed')}
-                  disabled={updating}
-                  className="px-6"
-                >
-                  Mark Completed
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleStatusUpdate(selectedAppointment.id, 'cancelled')}
-                  disabled={updating}
-                  className="px-6"
-                >
-                  Cancel
-                </Button>
-              </>
-            )}
-            {selectedAppointment?.status === 'confirmed' && (
-              <Button
-                variant="outline"
-                onClick={() => handleStatusUpdate(selectedAppointment.id, 'no_show')}
-                disabled={updating}
-                className="px-6"
-              >
-                Mark No Show
-              </Button>
-            )}
-          </StandardizedDialogFooter>
+              {/* Header - Clean, minimal */}
+              <StandardizedDialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
+                <div className="space-y-4">
+                  {/* Patient Name & Key Info */}
+                  <div>
+                    <StandardizedDialogTitle className="text-xl font-semibold text-gray-900 mb-1">
+                      {selectedAppointment.userName}
+                    </StandardizedDialogTitle>
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      {selectedPatientProfile?.dateOfBirth && (
+                        <span>
+                          {selectedPatientProfile.dateOfBirth.toDate().toLocaleDateString()}
+                          {' '}(Age {new Date().getFullYear() - selectedPatientProfile.dateOfBirth.toDate().getFullYear()})
+                        </span>
+                      )}
+                      {selectedAppointment.confirmationNumber && (
+                        <>
+                          <span className="text-gray-400">•</span>
+                          <span className="font-mono">#{selectedAppointment.confirmationNumber}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Appointment Details - Clean grid */}
+                  <div className="grid grid-cols-4 gap-6 text-sm">
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Service</p>
+                      <p className="font-medium text-gray-900">{selectedAppointment.serviceName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Provider</p>
+                      <p className="font-medium text-gray-900">{selectedAppointment.providerName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Date</p>
+                      <p className="font-medium text-gray-900">
+                        {formatDate(selectedAppointment.appointmentDate)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Time</p>
+                      <p className="font-medium text-gray-900">
+                        {formatTime(selectedAppointment.startTime)} - {formatTime(selectedAppointment.endTime)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status & Actions */}
+                  <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                    <span className="text-sm font-medium text-gray-700">Status:</span>
+                    <Badge variant="outline" className={statusColors[selectedAppointment.status]}>
+                      {selectedAppointment.status}
+                    </Badge>
+                    <div className="flex-1"></div>
+                    <div className="flex gap-2">
+                      {selectedAppointment.status === 'pending' && (
+                        <Button
+                          onClick={() => handleStatusUpdate(selectedAppointment.id, 'confirmed')}
+                          disabled={updating}
+                          size="sm"
+                        >
+                          Confirm
+                        </Button>
+                      )}
+                      {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'confirmed') && (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(selectedAppointment.id, 'completed')}
+                            disabled={updating}
+                            size="sm"
+                          >
+                            Complete
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(selectedAppointment.id, 'cancelled')}
+                            disabled={updating}
+                            size="sm"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                      {selectedAppointment.status === 'confirmed' && (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(selectedAppointment.id, 'no_show')}
+                          disabled={updating}
+                          size="sm"
+                        >
+                          No Show
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </StandardizedDialogHeader>
+
+              {/* Scrollable Content Area */}
+              <StandardizedDialogBody className="overflow-y-auto flex-1 px-8 py-6">
+                {/* Two-column layout for wider dialog */}
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Left Column */}
+                  <div className="space-y-6">
+                    {/* Medical Information - Minimal */}
+                    {selectedPatientProfile?.medicalHistory && (
+                      selectedPatientProfile.medicalHistory.medications?.length > 0 ||
+                      selectedPatientProfile.medicalHistory.conditions?.length > 0 ||
+                      selectedPatientProfile.medicalHistory.notes
+                    ) && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Heart className="h-4 w-4 text-gray-500" />
+                          Medical Information
+                        </h3>
+                        <div className="space-y-2.5 text-sm">
+                          {selectedPatientProfile.medicalHistory.medications && selectedPatientProfile.medicalHistory.medications.length > 0 && (
+                            <div>
+                              <p className="text-gray-600 mb-1">Medications</p>
+                              <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                                {selectedPatientProfile.medicalHistory.medications.join(', ')}
+                              </p>
+                            </div>
+                          )}
+                          {selectedPatientProfile.medicalHistory.conditions && selectedPatientProfile.medicalHistory.conditions.length > 0 && (
+                            <div>
+                              <p className="text-gray-600 mb-1">Conditions</p>
+                              <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                                {selectedPatientProfile.medicalHistory.conditions.join(', ')}
+                              </p>
+                            </div>
+                          )}
+                          {selectedPatientProfile.medicalHistory.notes && (
+                            <div>
+                              <p className="text-gray-600 mb-1">Medical Notes</p>
+                              <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                                {selectedPatientProfile.medicalHistory.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact Information */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        Contact Information
+                      </h3>
+                      <div className="space-y-2.5 text-sm">
+                        <div>
+                          <p className="text-gray-600 mb-1">Phone</p>
+                          <p className="text-gray-900">{selectedAppointment.userPhone || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 mb-1">Email</p>
+                          <p className="text-gray-900">{selectedAppointment.userEmail}</p>
+                        </div>
+
+                        {selectedPatientProfile?.emergencyContact && (
+                          <div className="pt-3 mt-3 border-t border-gray-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                              <span className="font-semibold text-gray-900">Emergency Contact</span>
+                            </div>
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-gray-600 mb-1">Name</p>
+                                <p className="text-gray-900">
+                                  {selectedPatientProfile.emergencyContact.name}
+                                  {selectedPatientProfile.emergencyContact.relationship && (
+                                    <span className="text-gray-500 ml-1">({selectedPatientProfile.emergencyContact.relationship})</span>
+                                  )}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600 mb-1">Phone</p>
+                                <p className="text-gray-900">{selectedPatientProfile.emergencyContact.phone}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-6">
+                    {/* Insurance Information */}
+                    {selectedPatientProfile?.insurance && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-gray-500" />
+                          Insurance
+                        </h3>
+                        <div className="space-y-2.5 text-sm">
+                          <div>
+                            <p className="text-gray-600 mb-1">Provider</p>
+                            <p className="text-gray-900">{selectedPatientProfile.insurance.provider}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600 mb-1">Policy Number</p>
+                            <p className="font-mono text-gray-900">{selectedPatientProfile.insurance.policyNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600 mb-1">Group Number</p>
+                            <p className="font-mono text-gray-900">{selectedPatientProfile.insurance.groupNumber}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {(selectedAppointment.notes || selectedAppointment.adminNotes) && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          Notes
+                        </h3>
+                        <div className="space-y-2.5 text-sm">
+                          {selectedAppointment.notes && (
+                            <div>
+                              <p className="text-gray-600 mb-1">Patient Notes</p>
+                              <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                                {selectedAppointment.notes}
+                              </p>
+                            </div>
+                          )}
+                          {selectedAppointment.adminNotes && (
+                            <div>
+                              <p className="text-gray-600 mb-1">Admin Notes</p>
+                              <p className="text-gray-900 bg-blue-50 px-3 py-2 rounded border border-blue-200">
+                                {selectedAppointment.adminNotes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer metadata */}
+                <div className="text-xs text-gray-500 pt-6 mt-6 border-t border-gray-200">
+                  Created: {formatDate(selectedAppointment.createdAt)}
+                </div>
+              </StandardizedDialogBody>
+            </>
+          )}
         </StandardizedDialogContent>
       </StandardizedDialog>
     </div>

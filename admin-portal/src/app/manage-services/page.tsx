@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  StandardizedDialog,
+  StandardizedDialogContent,
+  StandardizedDialogDescription,
+  StandardizedDialogFooter,
+  StandardizedDialogHeader,
+  StandardizedDialogTitle,
+  StandardizedDialogBody,
+} from "@/components/ui/standardized-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,7 @@ import {
 } from "@/lib/firebase/firestore";
 import type { Service } from "@/types/firebase";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -267,20 +269,31 @@ export default function ServicesPage() {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
+      <StandardizedDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <StandardizedDialogContent size="2xl" className="max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <StandardizedDialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
+            <StandardizedDialogTitle>
               {editingService ? "Edit Service" : "Add New Service"}
-            </DialogTitle>
-            <DialogDescription>
+            </StandardizedDialogTitle>
+            <StandardizedDialogDescription>
               {editingService
                 ? "Update service information"
                 : "Add a new dental service"}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
+            </StandardizedDialogDescription>
+          </StandardizedDialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <StandardizedDialogBody className="overflow-y-auto flex-1 px-6 py-4">
+              <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label>Service Image</Label>
+                <ImageUpload
+                  value={formData.imageUrl}
+                  onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                  folder="services"
+                  disabled={submitting}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="name">Service Name *</Label>
                 <Input
@@ -355,21 +368,9 @@ export default function ServicesPage() {
                   />
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.imageUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imageUrl: e.target.value })
-                  }
-                />
               </div>
-            </div>
-            <DialogFooter>
+            </StandardizedDialogBody>
+            <StandardizedDialogFooter className="px-6 pb-6">
               <Button
                 type="button"
                 variant="outline"
@@ -385,22 +386,22 @@ export default function ServicesPage() {
                   ? "Update"
                   : "Create"}
               </Button>
-            </DialogFooter>
+            </StandardizedDialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </StandardizedDialogContent>
+      </StandardizedDialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Service</DialogTitle>
-            <DialogDescription>
+      <StandardizedDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <StandardizedDialogContent size="md">
+          <StandardizedDialogHeader>
+            <StandardizedDialogTitle>Delete Service</StandardizedDialogTitle>
+            <StandardizedDialogDescription>
               Are you sure you want to delete {deletingService?.name}? This
               action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </StandardizedDialogDescription>
+          </StandardizedDialogHeader>
+          <StandardizedDialogFooter>
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
@@ -415,9 +416,9 @@ export default function ServicesPage() {
             >
               {submitting ? "Deleting..." : "Delete"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </StandardizedDialogFooter>
+        </StandardizedDialogContent>
+      </StandardizedDialog>
     </div>
   );
 }

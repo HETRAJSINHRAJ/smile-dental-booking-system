@@ -63,6 +63,7 @@ export interface Appointment {
   endTime: string; // HH:mm format
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes?: string;
+  confirmationNumber?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

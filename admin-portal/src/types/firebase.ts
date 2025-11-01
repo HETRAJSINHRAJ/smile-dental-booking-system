@@ -61,8 +61,10 @@ export interface Appointment {
   appointmentDate: Timestamp;
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   notes?: string;
+  adminNotes?: string;
+  confirmationNumber?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -85,4 +87,38 @@ export interface BookingData {
   date?: Date;
   time?: string;
   notes?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  uid: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  dateOfBirth?: Timestamp;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  insurance?: {
+    provider: string;
+    policyNumber: string;
+    groupNumber: string;
+  };
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+  };
+  medicalHistory?: {
+    allergies: string[];
+    medications: string[];
+    conditions: string[];
+    notes: string;
+  };
+  avatarUrl?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }

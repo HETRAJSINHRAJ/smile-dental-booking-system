@@ -111,7 +111,7 @@ END:VCALENDAR`;
     day: 'numeric',
   });
 
-  const confirmationNumber = appointmentId!.substring(0, 8).toUpperCase();
+  const confirmationNumber = appointment.confirmationNumber || appointmentId!.substring(0, 8).toUpperCase();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 py-12">

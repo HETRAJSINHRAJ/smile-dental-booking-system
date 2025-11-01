@@ -34,15 +34,17 @@ const StandardizedDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean;
-    size?: "sm" | "md" | "lg" | "xl" | "full";
+    size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
   }
 >(({ className, children, showCloseButton = true, size = "md", ...props }, ref) => {
   const sizeClasses = {
-    sm: "sm:max-w-sm",
-    md: "sm:max-w-md",
-    lg: "sm:max-w-lg",
-    xl: "sm:max-w-xl",
-    full: "sm:max-w-[90vw]",
+    sm: "max-w-[calc(100vw-2rem)] sm:max-w-sm",
+    md: "max-w-[calc(100vw-2rem)] sm:max-w-md",
+    lg: "max-w-[calc(100vw-2rem)] sm:max-w-lg",
+    xl: "max-w-[calc(100vw-2rem)] sm:max-w-xl",
+    "2xl": "max-w-[calc(100vw-2rem)] sm:max-w-2xl",
+    "3xl": "max-w-[calc(100vw-2rem)] sm:max-w-4xl",
+    full: "max-w-[calc(100vw-2rem)] sm:max-w-[90vw]",
   };
 
   return (
@@ -51,8 +53,8 @@ const StandardizedDialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%]",
-          "max-w-[calc(100%-2rem)] gap-6 bg-white rounded-2xl p-6 shadow-2xl",
+          "fixed left-[50%] top-[50%] z-50 w-full translate-x-[-50%] translate-y-[-50%]",
+          "bg-white rounded-2xl shadow-2xl p-6 gap-6",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -66,7 +68,7 @@ const StandardizedDialogContent = React.forwardRef<
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close className="absolute right-6 top-6 rounded-full p-1.5 opacity-70 ring-offset-white transition-all hover:opacity-100 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:pointer-events-none">
+          <DialogPrimitive.Close className="absolute right-6 top-6 z-10 rounded-full p-1.5 opacity-70 ring-offset-white transition-all hover:opacity-100 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:pointer-events-none">
             <X className="h-5 w-5 text-gray-600" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>

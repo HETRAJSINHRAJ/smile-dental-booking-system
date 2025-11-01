@@ -151,8 +151,23 @@ export const getProviderAppointments = (providerId: string, date: Date) => {
   ]);
 };
 
-export const createAppointment = (data: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => 
-  createDocument<Appointment>('appointments', data);
+// Generate a unique confirmation number
+function generateConfirmationNumber(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+export const createAppointment = async (data: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'confirmationNumber'>) => {
+  const confirmationNumber = generateConfirmationNumber();
+  return createDocument<Appointment>('appointments', {
+    ...data,
+    confirmationNumber
+  });
+};
 
 export const updateAppointment = (id: string, data: Partial<Appointment>) => 
   updateDocument<Appointment>('appointments', id, data);

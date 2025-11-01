@@ -201,7 +201,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {apt.patientName}
+                      {apt.userName}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {apt.serviceName} • {apt.startTime}
