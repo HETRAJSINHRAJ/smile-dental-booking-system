@@ -125,6 +125,8 @@ function ChartTooltipContent({
     indicator?: "line" | "dot" | "dashed"
     nameKey?: string
     labelKey?: string
+    payload?: any[]
+    label?: string
   }) {
   const { config } = useChart()
 
@@ -179,7 +181,7 @@ function ChartTooltipContent({
     >
       {!nestLabel ? tooltipLabel : null}
       <div className="grid gap-1.5">
-        {payload.map((item, index) => {
+        {payload.map((item: any, index: number) => {
           const key = `${nameKey || item.name || item.dataKey || "value"}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
           const indicatorColor = color || item.payload.fill || item.color
@@ -202,7 +204,7 @@ function ChartTooltipContent({
                     !hideIndicator && (
                       <div
                         className={cn(
-                          "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
+                          "shrink-0 rounded-[2px]",
                           {
                             "h-2.5 w-2.5": indicator === "dot",
                             "w-1": indicator === "line",
@@ -211,12 +213,10 @@ function ChartTooltipContent({
                             "my-0.5": nestLabel && indicator === "dashed",
                           }
                         )}
-                        style={
-                          {
-                            "--color-bg": indicatorColor,
-                            "--color-border": indicatorColor,
-                          } as React.CSSProperties
-                        }
+                        style={{
+                          backgroundColor: indicatorColor,
+                          borderColor: indicatorColor,
+                        }}
                       />
                     )
                   )}
@@ -257,9 +257,10 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+  Pick<RechartsPrimitive.LegendProps, "verticalAlign"> & {
     hideIcon?: boolean
     nameKey?: string
+    payload?: any[]
   }) {
   const { config } = useChart()
 
@@ -275,7 +276,7 @@ function ChartLegendContent({
         className
       )}
     >
-      {payload.map((item) => {
+      {payload.map((item: any) => {
         const key = `${nameKey || item.dataKey || "value"}`
         const itemConfig = getPayloadConfigFromPayload(config, item, key)
 

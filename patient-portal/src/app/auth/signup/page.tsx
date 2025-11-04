@@ -7,12 +7,14 @@ import Link from 'next/link';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export default function SignupPage() {
   const router = useRouter();
   const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await signUp(email, password, name);
+      await signUp(email, password, name, phone);
       router.push("/");
     } catch (err: any) {
       console.error('Signup error:', err);
@@ -97,6 +99,22 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
                 placeholder="john@example.com"
+              />
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium mb-2">
+                Phone Number
+              </label>
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+                showValidation={true}
+                showTelecomCircle={true}
+                showSMSIndicator={true}
+                placeholder="+91 12345 67890"
+                className="bg-background"
               />
             </div>
 

@@ -52,7 +52,7 @@ export async function getAllDocuments<T>(
   }
 }
 
-export async function createDocument<T>(collectionName: string, data: Omit<T, 'id'>): Promise<string> {
+export async function createDocument<T>(collectionName: string, data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   try {
     const collectionRef = collection(db, collectionName);
     const docRef = await addDoc(collectionRef, {
@@ -151,7 +151,7 @@ export const getProviderAppointments = (providerId: string, date: Date) => {
   ]);
 };
 
-export const createAppointment = (data: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => 
+export const createAppointment = (data: Omit<Appointment, 'id'>) => 
   createDocument<Appointment>('appointments', data);
 
 export const updateAppointment = (id: string, data: Partial<Appointment>) => 
@@ -164,7 +164,7 @@ export const getContactInquiries = () =>
   getAllDocuments<ContactInquiry>('contact_inquiries', [orderBy('createdAt', 'desc')]);
 export const getContactInquiry = (id: string) => 
   getDocument<ContactInquiry>('contact_inquiries', id);
-export const createContactInquiry = (data: Omit<ContactInquiry, 'id' | 'createdAt' | 'updatedAt'>) => 
+export const createContactInquiry = (data: Omit<ContactInquiry, 'id'>) => 
   createDocument<ContactInquiry>('contact_inquiries', data);
 export const updateContactInquiry = (id: string, data: Partial<ContactInquiry>) => 
   updateDocument<ContactInquiry>('contact_inquiries', id, data);

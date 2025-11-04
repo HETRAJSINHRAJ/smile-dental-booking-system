@@ -64,6 +64,23 @@ export interface Appointment {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes?: string;
   confirmationNumber?: string;
+  
+  // Payment fields for appointment reservation system
+  paymentStatus: 'pending' | 'reservation_paid' | 'fully_paid' | 'refunded';
+  paymentAmount: number; // Amount paid online (reservation fee)
+  paymentTransactionId?: string;
+  paymentType: 'appointment_reservation' | 'full_payment' | 'service_payment';
+  paymentDate?: Timestamp;
+  paymentMethod?: string;
+  
+  // Service payment fields (collected at clinic)
+  servicePaymentStatus: 'pending' | 'paid' | 'waived';
+  servicePaymentAmount: number; // Service fee to be collected at clinic
+  servicePaymentDate?: Timestamp;
+  servicePaymentMethod?: 'cash' | 'card' | 'upi' | 'other';
+  servicePaymentTransactionId?: string;
+  servicePaymentNotes?: string;
+  
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

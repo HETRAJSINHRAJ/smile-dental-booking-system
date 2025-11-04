@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Sparkles, Clock, DollarSign } from 'lucide-react';
+import { useCurrency } from '@/lib/localization/useCurrency';
 
 interface Service {
   id: string;
@@ -21,6 +22,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const { formatCurrency } = useCurrency();
 
   // Mock data for development (replace with Firestore data later)
   const mockServices: Service[] = [
@@ -241,7 +243,7 @@ export default function ServicesPage() {
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4" />
                       <span className="font-semibold text-blue-600 text-lg">
-                        ${service.price}
+                        {formatCurrency(service.price)}
                       </span>
                     </div>
                   </div>

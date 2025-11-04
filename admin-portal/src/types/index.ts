@@ -41,15 +41,26 @@ export interface UserProfile {
 export interface Provider {
   id: string;
   name: string;
+  title: string;
   specialty: string;
+  specialization: string;
   bio: string;
   qualifications: string[];
   experienceYears: number;
   photoUrl: string;
+  imageUrl: string;
   email: string;
   phone: string;
   isActive: boolean;
+  acceptingNewPatients: boolean;
   displayOrder: number;
+  yearsOfExperience: number;
+  rating: number;
+  totalReviews: number;
+  education: string[];
+  certifications: string[];
+  languages: string[];
+  serviceIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }

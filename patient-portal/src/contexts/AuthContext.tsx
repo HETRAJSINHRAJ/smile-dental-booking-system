@@ -29,7 +29,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName: string, role?: 'patient' | 'admin') => Promise<void>;
+  signUp: (email: string, password: string, displayName: string, phoneNumber?: string, role?: 'patient' | 'admin') => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -82,14 +82,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string,
     password: string,
     displayName: string,
+    phoneNumber?: string,
     role: 'patient' | 'admin' = 'patient'
   ) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Update profile with display name
-      await updateProfile(user, { displayName });
+      // Update profile with display name and phone number
+      const profileUpdates: any = { displayName };
+      if (phoneNumber) {
+        profileUpdates.phoneNumber = phoneNumber;
+      }
+      await updateProfile(user, profileUpdates);
 
       // Create user document in Firestore
       const userDocRef = doc(db, 'users', user.uid);
@@ -97,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         uid: user.uid,
         email: user.email!,
         displayName,
+        phoneNumber,
         role,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

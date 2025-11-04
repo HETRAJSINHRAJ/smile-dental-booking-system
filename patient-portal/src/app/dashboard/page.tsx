@@ -56,6 +56,13 @@ export default function DashboardPage() {
       const userAppointments = await getAppointments(user.uid);
       const processedAppointments = userAppointments.map(apt => ({
         ...apt,
+        patientId: apt.userId,
+        patientName: apt.userName,
+        patientEmail: apt.userEmail,
+        patientPhone: apt.userPhone,
+        serviceDuration: 30, // Default duration
+        reminderSent: false,
+        confirmationSent: false,
         appointmentDate: apt.appointmentDate instanceof Timestamp 
           ? apt.appointmentDate.toDate() 
           : new Date(apt.appointmentDate),
@@ -66,7 +73,7 @@ export default function DashboardPage() {
           ? apt.updatedAt.toDate() 
           : new Date(apt.updatedAt),
       }));
-      setAppointments(processedAppointments);
+      setAppointments(processedAppointments as Appointment[]);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');

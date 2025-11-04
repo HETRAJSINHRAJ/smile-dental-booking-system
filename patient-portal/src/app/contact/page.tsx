@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -195,14 +196,14 @@ export default function ContactPage() {
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                       Phone
                     </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
+                    <PhoneInput
                       value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="(555) 123-4567"
+                      onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                      showValidation={true}
+                      showTelecomCircle={false}
+                      showSMSIndicator={false}
+                      placeholder="+91 12345 67890"
+                      className="bg-white"
                     />
                   </div>
                 </div>
@@ -317,10 +318,10 @@ export default function ContactPage() {
             We're here to help! Call us immediately for urgent dental care.
           </p>
           <a
-            href="tel:+15551234567"
+            href="tel:+911234567890"
             className="inline-block bg-white text-red-600 px-8 py-4 rounded-full font-semibold text-lg hover:bg-red-50 transition-colors shadow-xl"
           >
-            Call Now: (555) 123-4567
+            Call Now: +91 12345 67890
           </a>
         </div>
       </section>

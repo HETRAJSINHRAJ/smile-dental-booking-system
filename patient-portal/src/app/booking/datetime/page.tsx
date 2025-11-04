@@ -7,6 +7,7 @@ import { getService, getProvider, getAvailableTimeSlots } from '@/lib/firebase/f
 import type { Service, Provider } from '@/types/firebase';
 import { Loader2, ArrowLeft, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/lib/localization/useCurrency';
 
 function SelectDateTimeContent() {
   const router = useRouter();
@@ -15,6 +16,7 @@ function SelectDateTimeContent() {
   const serviceId = searchParams.get('serviceId');
   const providerId = searchParams.get('providerId');
   const { user, loading: authLoading } = useAuth();
+  const { formatCurrency } = useCurrency();
 
   const [service, setService] = useState<Service | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
@@ -167,7 +169,7 @@ function SelectDateTimeContent() {
             <div>
               <p className="text-sm text-muted-foreground">Service:</p>
               <p className="font-semibold">{service?.name}</p>
-              <p className="text-xs text-muted-foreground">{service?.duration} min • ${service?.price}</p>
+              <p className="text-xs text-muted-foreground">{service?.duration} min • {formatCurrency(service?.price || 0)}</p>
             </div>
             <div className="hidden sm:block w-px bg-border" />
             <div>

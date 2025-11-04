@@ -2,88 +2,82 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { getService, getProvidersByService } from '@/lib/firebase/firestore';
-import type { Provider, Service } from '@/types/firebase';
-import { Loader2, ArrowLeft, Award, Star, Languages, GraduationCap, CheckCircle2, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import { toast } from 'sonner';
+import { ArrowLeft, Star, Award, Languages, CheckCircle2, GraduationCap, Loader2 } from 'lucide-react';
+import { getProviders } from '@/lib/firebase/firestore';
+import { Provider } from '@/types/firebase';
+import { useCurrency } from '@/lib/localization/useCurrency';
+
+// Force dynamic rendering to prevent prerendering
+export const dynamic = 'force-dynamic';
 
 function SelectProviderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const serviceId = searchParams.get('serviceId');
-  const { user, loading: authLoading } = useAuth();
-
-  const [service, setService] = useState<Service | null>(null);
+  const { formatCurrency } = useCurrency();
+  
+  const [service, setService] = useState<any>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterSpecialty, setFilterSpecialty] = useState<string>('all');
+  const [filterSpecialty, setFilterSpecialty] = useState('all');
   const [sortBy, setSortBy] = useState<'rating' | 'experience' | 'name'>('rating');
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login?redirect=/booking');
+    const serviceId = searchParams.get('serviceId');
+    const serviceName = searchParams.get('serviceName');
+    const servicePrice = searchParams.get('servicePrice');
+    const serviceDuration = searchParams.get('serviceDuration');
+    
+    if (serviceId && serviceName && servicePrice && serviceDuration) {
+      setService({
+        id: serviceId,
+        name: serviceName,
+        price: parseFloat(servicePrice),
+        duration: parseInt(serviceDuration)
+      });
     }
-  }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (!serviceId) {
-      router.push('/booking');
-      return;
-    }
+    loadProviders();
+  }, [searchParams]);
 
-    loadData();
-  }, [serviceId]);
-
-  async function loadData() {
+  const loadProviders = async () => {
     try {
-      setLoading(true);
-      
-      const [serviceData, providersData] = await Promise.all([
-        getService(serviceId!),
-        getProvidersByService(serviceId!)
-      ]);
-
-      if (!serviceData) {
-        toast.error("Service not found");
-        router.push("/booking");
-        return;
-      }
-
-      setService(serviceData);
+      const providersData = await getProviders();
       setProviders(providersData);
     } catch (error) {
-      console.error("Error loading data:", error);
-      toast.error("Failed to load providers");
+      console.error('Error loading providers:', error);
     } finally {
       setLoading(false);
     }
-  }
-
-  const handleProviderSelect = (provider: Provider) => {
-    router.push(
-      `/booking/datetime?serviceId=${serviceId}&providerId=${provider.id}`
-    );
   };
 
-  // Get unique specialties for filter
-  const specialties = ['all', ...new Set(providers.map(p => p.specialty).filter(Boolean))];
+  const handleProviderSelect = (provider: Provider) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('providerId', provider.id);
+    params.set('providerName', provider.name);
+    params.set('providerTitle', provider.title);
+    params.set('providerSpecialty', provider.specialty);
+    router.push(`/booking/datetime?${params.toString()}`);
+  };
 
-  // Filter and sort providers
+  const specialties = ['all', 'General Dentistry', 'Orthodontics', 'Periodontics', 'Endodontics', 'Oral Surgery', 'Pediatric Dentistry'];
+
   const filteredAndSortedProviders = providers
-    .filter(p => filterSpecialty === 'all' || p.specialty === filterSpecialty)
+    .filter(provider => filterSpecialty === 'all' || provider.specialty === filterSpecialty)
     .sort((a, b) => {
-      if (sortBy === 'rating') {
-        return (b.rating || 0) - (a.rating || 0);
-      } else if (sortBy === 'experience') {
-        return b.yearsOfExperience - a.yearsOfExperience;
-      } else {
-        return a.name.localeCompare(b.name);
+      switch (sortBy) {
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'experience':
+          return b.yearsOfExperience - a.yearsOfExperience;
+        case 'name':
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
       }
     });
 
-  if (loading || authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -92,10 +86,9 @@ function SelectProviderContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="max-w-3xl mx-auto text-center mb-8">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
           <button
             onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-primary hover:text-primary/80 mb-6"
@@ -104,17 +97,17 @@ function SelectProviderContent() {
             Back
           </button>
 
-          <h1 className="text-4xl font-bold mb-4">Choose Your Provider</h1>
-          <p className="text-xl text-muted-foreground mb-4">
-            Step 2 of 4: Select your preferred dentist
-          </p>
+           <h1 className="text-4xl font-bold mb-4">Choose Your Provider</h1>
+           <p className="text-xl text-muted-foreground mb-4">
+             Step 2 of 4: Select your preferred dentist
+           </p>
           
           {/* Selected Service Info */}
           {service && (
             <div className="inline-block bg-muted px-6 py-3 rounded-lg mb-6">
               <p className="text-sm text-muted-foreground">Selected Service:</p>
               <p className="font-semibold">{service.name}</p>
-              <p className="text-sm text-muted-foreground">{service.duration} min • ${service.price}</p>
+              <p className="text-sm text-muted-foreground">{service.duration} min • {formatCurrency(service.price)}</p>
             </div>
           )}
 
@@ -184,7 +177,7 @@ function SelectProviderContent() {
                 {/* Provider Photo */}
                 <div className="relative h-64">
                   <Image
-                    src={provider.imageUrl}
+                    src={provider.imageUrl || '/placeholder-provider.jpg'}
                     alt={provider.name}
                     fill
                     className="object-cover"
@@ -283,9 +276,6 @@ function SelectProviderContent() {
     </div>
   );
 }
-
-// Force dynamic rendering to prevent prerendering
-export const dynamic = 'force-dynamic';
 
 export default function SelectProviderPage() {
   return (

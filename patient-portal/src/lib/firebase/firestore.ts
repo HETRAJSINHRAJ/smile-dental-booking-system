@@ -52,7 +52,7 @@ export async function getAllDocuments<T>(
   }
 }
 
-export async function createDocument<T>(collectionName: string, data: Omit<T, 'id'>): Promise<string> {
+export async function createDocument<T>(collectionName: string, data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   try {
     const collectionRef = collection(db, collectionName);
     const docRef = await addDoc(collectionRef, {

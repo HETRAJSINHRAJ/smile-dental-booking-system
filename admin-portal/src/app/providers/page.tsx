@@ -24,15 +24,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, User, X } from "lucide-react";
+import { Plus, Pencil, Trash2, User, X, Edit, Calendar, Clock } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   getProviders,
   createProvider,
   updateProvider,
   deleteProvider,
   getServices,
+  getProviderSchedule,
+  createProviderSchedule,
+  updateProviderSchedule,
+  deleteProviderSchedule,
 } from "@/lib/firebase/firestore";
-import type { Provider, Service } from "@/types/firebase";
+import type { Provider, Service, ProviderSchedule } from "@/types/firebase";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -40,6 +51,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [providerSchedules, setProviderSchedules] = useState<ProviderSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -54,22 +66,26 @@ export default function ProvidersPage() {
     email: "",
     phone: "",
     imageUrl: "",
-    specialization: "",
     specialty: "",
     serviceIds: [] as string[],
     yearsOfExperience: 0,
-    rating: 5.0,
-    totalReviews: 0,
     education: [] as string[],
-    certifications: [] as string[],
     languages: [] as string[],
+    specializations: [] as string[],
     acceptingNewPatients: true,
+    rating: 0,
+    totalReviews: 0,
   });
 
   // Temp input states for arrays
   const [newEducation, setNewEducation] = useState("");
   const [newCertification, setNewCertification] = useState("");
   const [newLanguage, setNewLanguage] = useState("");
+
+  // Provider Schedule states
+  const [scheduleFormData, setScheduleFormData] = useState<Partial<ProviderSchedule>>({});
+  const [editingSchedule, setEditingSchedule] = useState<ProviderSchedule | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -84,6 +100,12 @@ export default function ProvidersPage() {
       ]);
       setProviders(providersData);
       setServices(servicesData);
+      
+      // Load schedules for all providers
+      const allSchedules = await Promise.all(
+        providersData.map(provider => getProviderSchedule(provider.id))
+      );
+      setProviderSchedules(allSchedules.flat());
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load providers");
@@ -101,16 +123,15 @@ export default function ProvidersPage() {
       email: "",
       phone: "",
       imageUrl: "",
-      specialization: "",
       specialty: "",
       serviceIds: [],
       yearsOfExperience: 0,
-      rating: 5.0,
-      totalReviews: 0,
       education: [],
-      certifications: [],
       languages: [],
+      specializations: [],
       acceptingNewPatients: true,
+      rating: 0,
+      totalReviews: 0,
     });
     setDialogOpen(true);
   }
@@ -124,16 +145,15 @@ export default function ProvidersPage() {
       email: provider.email || "",
       phone: provider.phone || "",
       imageUrl: provider.imageUrl || "",
-      specialization: provider.specialization || "",
       specialty: provider.specialty || "",
       serviceIds: provider.serviceIds || [],
       yearsOfExperience: provider.yearsOfExperience || 0,
-      rating: provider.rating || 5.0,
-      totalReviews: provider.totalReviews || 0,
       education: provider.education || [],
-      certifications: provider.certifications || [],
       languages: provider.languages || [],
+      specializations: provider.specializations || [],
       acceptingNewPatients: provider.acceptingNewPatients ?? true,
+      rating: provider.rating || 0,
+      totalReviews: provider.totalReviews || 0,
     });
     setDialogOpen(true);
   }
@@ -213,7 +233,7 @@ export default function ProvidersPage() {
     if (newCertification.trim()) {
       setFormData(prev => ({
         ...prev,
-        certifications: [...prev.certifications, newCertification.trim()]
+        specializations: [...prev.specializations, newCertification.trim()]
       }));
       setNewCertification("");
     }
@@ -222,7 +242,7 @@ export default function ProvidersPage() {
   const removeCertification = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index)
+      specializations: prev.specializations.filter((_, i) => i !== index)
     }));
   };
 
@@ -241,6 +261,155 @@ export default function ProvidersPage() {
       ...prev,
       languages: prev.languages.filter((_, i) => i !== index)
     }));
+  };
+
+  // Provider Schedule functions
+  function openScheduleDialog(providerId?: string, schedule?: ProviderSchedule) {
+    setEditingSchedule(schedule || null);
+    if (schedule) {
+      // Editing existing schedule
+      setScheduleFormData(schedule);
+    } else {
+      // Creating new schedule
+      setScheduleFormData({
+        id: '',
+        providerId: providerId || '',
+        dayOfWeek: 1, // Monday
+        startTime: '09:00',
+        endTime: '17:00',
+        breakStartTime: '12:00',
+        breakEndTime: '13:00',
+        isAvailable: true,
+      });
+    }
+    setScheduleDialogOpen(true);
+  }
+
+  async function handleScheduleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    
+    // Validate schedule data
+    const scheduleData = scheduleFormData;
+    
+    // Check if day of week is selected
+    if (scheduleData.dayOfWeek === undefined || scheduleData.dayOfWeek === null) {
+      toast.error("Please select a day of the week");
+      return;
+    }
+    
+    // Validate time slots
+    if (!scheduleData.startTime || !scheduleData.endTime) {
+      toast.error("Please select both start and end times");
+      return;
+    }
+    
+    // Check if start time is before end time
+    if (scheduleData.startTime >= scheduleData.endTime) {
+      toast.error("Start time must be before end time");
+      return;
+    }
+    
+    // Validate break times if provided
+    if (scheduleData.breakStartTime && scheduleData.breakEndTime) {
+      if (scheduleData.breakStartTime >= scheduleData.breakEndTime) {
+        toast.error("Break start time must be before break end time");
+        return;
+      }
+      
+      // Check if break is within working hours
+      if (scheduleData.breakStartTime < scheduleData.startTime || scheduleData.breakEndTime > scheduleData.endTime) {
+        toast.error("Break time must be within working hours");
+        return;
+      }
+    }
+    
+    // Check for conflicting schedules (only for new schedules or when editing day/time)
+    const existingSchedules = getProviderSchedules(scheduleData.providerId || '');
+    const hasConflict = existingSchedules.some(schedule => {
+      if (editingSchedule && schedule.id === editingSchedule.id) return false;
+      
+      return schedule.dayOfWeek === scheduleData.dayOfWeek && 
+             schedule.isAvailable && scheduleData.isAvailable &&
+             scheduleData.startTime && scheduleData.endTime &&
+             ((scheduleData.startTime >= schedule.startTime && scheduleData.startTime < schedule.endTime) ||
+              (scheduleData.endTime > schedule.startTime && scheduleData.endTime <= schedule.endTime) ||
+              (scheduleData.startTime <= schedule.startTime && scheduleData.endTime >= schedule.endTime));
+    });
+    
+    if (hasConflict) {
+      toast.error("This schedule conflicts with an existing schedule for the same day");
+      return;
+    }
+    
+    setSubmitting(true);
+
+    try {
+      if (editingSchedule) {
+        await updateProviderSchedule(editingSchedule.id, scheduleData);
+        toast.success("Schedule updated successfully");
+      } else {
+        // Ensure all required fields are present for new schedule
+        const newScheduleData: Omit<ProviderSchedule, 'id'> = {
+          providerId: scheduleData.providerId || '',
+          dayOfWeek: scheduleData.dayOfWeek!,
+          startTime: scheduleData.startTime!,
+          endTime: scheduleData.endTime!,
+          breakStartTime: scheduleData.breakStartTime,
+          breakEndTime: scheduleData.breakEndTime,
+          isAvailable: scheduleData.isAvailable ?? true,
+        };
+        await createProviderSchedule(newScheduleData);
+        toast.success("Schedule created successfully");
+      }
+      
+      setScheduleDialogOpen(false);
+      loadData(); // Reload all data including schedules
+    } catch (error) {
+      console.error("Error saving schedule:", error);
+      toast.error("Failed to save schedule");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleScheduleDelete(scheduleId: string) {
+    if (!scheduleId) return;
+    setSubmitting(true);
+
+    try {
+      await deleteProviderSchedule(scheduleId);
+      toast.success("Schedule deleted successfully");
+      loadData(); // Reload all data including schedules
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      toast.error("Failed to delete schedule");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const updateScheduleFormData = (field: keyof ProviderSchedule, value: any) => {
+    setScheduleFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const getProviderSchedules = (providerId: string) => {
+    return providerSchedules.filter(schedule => schedule.providerId === providerId);
+  };
+
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek];
   };
 
   return (
@@ -334,7 +503,7 @@ export default function ProvidersPage() {
                   </TableCell>
                   <TableCell>{provider.title}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {provider.specialty || provider.specialization || "N/A"}
+                    {provider.specialty || "N/A"}
                   </TableCell>
                   <TableCell>
                     {provider.rating ? (
@@ -448,7 +617,7 @@ export default function ProvidersPage() {
                     placeholder="e.g., Orthodontics"
                     value={formData.specialty}
                     onChange={(e) =>
-                      setFormData({ ...formData, specialty: e.target.value, specialization: e.target.value })
+                      setFormData({ ...formData, specialty: e.target.value })
                     }
                   />
                 </div>
@@ -571,9 +740,9 @@ export default function ProvidersPage() {
                 </div>
               </div>
 
-              {/* Certifications */}
+              {/* Specializations */}
               <div className="space-y-2">
-                <Label>Certifications</Label>
+                <Label>Specializations</Label>
                 <div className="flex gap-2">
                   <Input
                     placeholder="e.g., Board Certified Orthodontist"
@@ -586,9 +755,9 @@ export default function ProvidersPage() {
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.certifications.map((cert, idx) => (
+                  {formData.specializations.map((spec, idx) => (
                     <div key={idx} className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm">
-                      <span>{cert}</span>
+                      <span>{spec}</span>
                       <button type="button" onClick={() => removeCertification(idx)}>
                         <X className="w-3 h-3" />
                       </button>
@@ -621,6 +790,71 @@ export default function ProvidersPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Provider Schedule */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Provider Schedule</Label>
+                  <Button
+                    type="button"
+                    onClick={() => openScheduleDialog(editingProvider?.id)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Schedule
+                  </Button>
+                </div>
+                
+                {getProviderSchedules(editingProvider?.id || '').length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                    {getProviderSchedules(editingProvider?.id || '').map((schedule) => (
+                      <div key={schedule.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{getDayName(schedule.dayOfWeek)}</span>
+                            <span className="text-xs text-gray-500">
+                              {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                            </span>
+                          </div>
+                          {schedule.breakStartTime && schedule.breakEndTime && (
+                            <span className="text-xs text-gray-400">
+                              Break: {formatTime(schedule.breakStartTime)} - {formatTime(schedule.breakEndTime)}
+                            </span>
+                          )}
+                          {!schedule.isAvailable && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Unavailable</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            onClick={() => openScheduleDialog(editingProvider?.id, schedule)}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => handleScheduleDelete(schedule.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4 border rounded-lg">
+                    No schedules added yet. Click "Add Schedule" to create one.
+                  </p>
+                )}
               </div>
 
               {/* Services */}
@@ -689,6 +923,144 @@ export default function ProvidersPage() {
               {submitting ? "Deleting..." : "Delete"}
             </Button>
           </StandardizedDialogFooter>
+        </StandardizedDialogContent>
+      </StandardizedDialog>
+
+      {/* Provider Schedule Dialog */}
+      <StandardizedDialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <StandardizedDialogContent size="lg">
+          <StandardizedDialogHeader>
+            <StandardizedDialogTitle>
+              {editingSchedule ? "Edit Schedule" : "Add Schedule"}
+            </StandardizedDialogTitle>
+            <StandardizedDialogDescription>
+              {editingSchedule
+                ? "Update provider schedule information"
+                : "Add a new schedule for the provider"}
+            </StandardizedDialogDescription>
+          </StandardizedDialogHeader>
+          <form onSubmit={handleScheduleSubmit} className="space-y-4">
+            <StandardizedDialogBody>
+              <div className="space-y-4">
+                {/* Day of Week */}
+                <div className="space-y-2">
+                  <Label htmlFor="dayOfWeek">Day of Week *</Label>
+                  <Select
+                    value={scheduleFormData?.dayOfWeek?.toString() || ''}
+                    onValueChange={(value) => updateScheduleFormData('dayOfWeek', parseInt(value))}
+                  >
+                    <SelectTrigger id="dayOfWeek">
+                      <SelectValue placeholder="Select a day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Sunday</SelectItem>
+                      <SelectItem value="1">Monday</SelectItem>
+                      <SelectItem value="2">Tuesday</SelectItem>
+                      <SelectItem value="3">Wednesday</SelectItem>
+                      <SelectItem value="4">Thursday</SelectItem>
+                      <SelectItem value="5">Friday</SelectItem>
+                      <SelectItem value="6">Saturday</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Time Slots */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startTime">Start Time *</Label>
+                    <Input
+                      id="startTime"
+                      type="time"
+                      value={scheduleFormData?.startTime || ''}
+                  onChange={(e) => updateScheduleFormData('startTime', e.target.value)}
+                      required
+                      min="00:00"
+                      max="23:59"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">End Time *</Label>
+                    <Input
+                      id="endTime"
+                      type="time"
+                      value={scheduleFormData?.endTime || ''}
+                  onChange={(e) => updateScheduleFormData('endTime', e.target.value)}
+                      required
+                      min="00:00"
+                      max="23:59"
+                    />
+                  </div>
+                </div>
+                {scheduleFormData?.startTime && scheduleFormData?.endTime && scheduleFormData.startTime >= scheduleFormData.endTime && (
+                  <p className="text-sm text-red-600">End time must be after start time</p>
+                )}
+
+                {/* Break Time */}
+                <div className="space-y-2">
+                  <Label>Break Time (Optional)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="breakStartTime">Break Start Time</Label>
+                      <Input
+                        id="breakStartTime"
+                        type="time"
+                        value={scheduleFormData?.breakStartTime || ''}
+                  onChange={(e) => updateScheduleFormData('breakStartTime', e.target.value)}
+                  min={scheduleFormData?.startTime || '00:00'}
+                  max={scheduleFormData?.endTime || '23:59'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="breakEndTime">Break End Time</Label>
+                      <Input
+                        id="breakEndTime"
+                        type="time"
+                        value={scheduleFormData?.breakEndTime || ''}
+                  onChange={(e) => updateScheduleFormData('breakEndTime', e.target.value)}
+                  min={scheduleFormData?.startTime || '00:00'}
+                  max={scheduleFormData?.endTime || '23:59'}
+                      />
+                    </div>
+                  </div>
+                  {scheduleFormData?.breakStartTime && scheduleFormData?.breakEndTime &&
+                  scheduleFormData.breakStartTime >= scheduleFormData.breakEndTime && (
+                    <p className="text-sm text-red-600">Break end time must be after break start time</p>
+                  )}
+                  {scheduleFormData?.breakStartTime && scheduleFormData?.breakEndTime &&
+                  scheduleFormData.startTime && scheduleFormData.endTime &&
+                  (scheduleFormData.breakStartTime < scheduleFormData.startTime ||
+                   scheduleFormData.breakEndTime > scheduleFormData.endTime) && (
+                    <p className="text-sm text-red-600">Break time must be within working hours</p>
+                  )}
+                </div>
+
+                {/* Availability */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isAvailable"
+                    checked={scheduleFormData?.isAvailable || false}
+                    onCheckedChange={(checked) => updateScheduleFormData('isAvailable', checked === true)}
+                  />
+                  <Label htmlFor="isAvailable" className="cursor-pointer">
+                    Available on this day
+                  </Label>
+                </div>
+              </div>
+            </StandardizedDialogBody>
+            <StandardizedDialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setScheduleDialogOpen(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving..." : editingSchedule ? "Update" : "Create"}
+              </Button>
+            </StandardizedDialogFooter>
+          </form>
         </StandardizedDialogContent>
       </StandardizedDialog>
     </div>

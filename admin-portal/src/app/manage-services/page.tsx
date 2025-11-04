@@ -34,6 +34,7 @@ import {
 import type { Service } from "@/types/firebase";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { useCurrency } from "@/lib/localization/useCurrency";
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -43,6 +44,7 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [deletingService, setDeletingService] = useState<Service | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { formatCurrency, parseCurrency } = useCurrency();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -233,7 +235,7 @@ export default function ServicesPage() {
                     <span className="text-sm">{service.duration} min</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium">${service.price}</span>
+                    <span className="font-medium">{formatCurrency(service.price)}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
@@ -340,7 +342,7 @@ export default function ServicesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price ($) *</Label>
+                  <Label htmlFor="price">Price (₹) *</Label>
                   <Input
                     id="price"
                     type="number"

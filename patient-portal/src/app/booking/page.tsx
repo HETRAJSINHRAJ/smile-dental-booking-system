@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Clock, DollarSign, Loader2 } from 'lucide-react';
 import { Service } from '@/types/firebase';
+import { useCurrency } from '@/lib/localization/useCurrency';
 
 export default function SelectServicePage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function SelectServicePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const { formatCurrency } = useCurrency();
 
   // Mock data for development (will be replaced by Firestore data)
   const mockServices = [
@@ -182,7 +184,7 @@ export default function SelectServicePage() {
               className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer group"
             >
               {/* Service Icon */}
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-center">
+              <div className="bg-linear-to-br from-blue-500 to-blue-600 p-6 text-center">
                 <div className="text-6xl mb-3 group-hover:scale-110 transition-transform">
                   🦷
                 </div>
@@ -202,9 +204,8 @@ export default function SelectServicePage() {
                     <span>{service.duration} min</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-5 h-5 text-blue-600" />
                     <span className="font-semibold text-blue-600 text-lg">
-                      {service.price}
+                      {formatCurrency(service.price)}
                     </span>
                   </div>
                 </div>
