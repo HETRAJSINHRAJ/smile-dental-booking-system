@@ -34,7 +34,7 @@ const StandardizedDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean;
-    size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
+    size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "full";
   }
 >(({ className, children, showCloseButton = true, size = "md", ...props }, ref) => {
   const sizeClasses = {
@@ -43,7 +43,7 @@ const StandardizedDialogContent = React.forwardRef<
     lg: "max-w-[calc(100vw-2rem)] sm:max-w-lg",
     xl: "max-w-[calc(100vw-2rem)] sm:max-w-xl",
     "2xl": "max-w-[calc(100vw-2rem)] sm:max-w-2xl",
-    "3xl": "max-w-[calc(100vw-2rem)] sm:max-w-4xl",
+    "3xl": "max-w-[calc(100vw-2rem)] sm:max-w-6xl",
     full: "max-w-[calc(100vw-2rem)] sm:max-w-[90vw]",
   };
 

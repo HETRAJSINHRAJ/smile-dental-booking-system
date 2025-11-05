@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Calendar, Filter, Search, Clock, User, Phone, Mail, CheckCircle2, XCircle, AlertCircle, FileText, Heart, Shield } from 'lucide-react';
+import { Calendar, Filter, Search, Clock, User, Phone, Mail, CheckCircle2, XCircle, AlertCircle, FileText, Heart, Shield, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,6 +32,8 @@ import { getAllDocuments, updateAppointment, getDocument } from '@/lib/firebase/
 import type { Appointment, UserProfile } from '@/types/firebase';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
+import TodayAppointments from '@/components/appointments/TodayAppointments';
+import CreateAppointmentDialog from '@/components/appointments/CreateAppointmentDialog';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
@@ -60,6 +62,7 @@ export default function AppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedPatientProfile, setSelectedPatientProfile] = useState<UserProfile | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
@@ -167,12 +170,21 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Appointments</h1>
-          <p className="text-muted-foreground">Manage all patient appointments</p>
-        </div>
-        <div className="flex items-center gap-2">
+
+      {/* Today's Appointments Section */}
+      <TodayAppointments />
+
+      {/* Separator */}
+      <div className="flex justify-between items-center border-t pt-6">
+        <h2 className="text-xl font-semibold">All Appointments</h2>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setCreateDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Create Appointment
+          </Button>
           <Badge variant="outline" className="px-3 py-1">
             Total: {appointments.length}
           </Badge>
@@ -576,6 +588,13 @@ export default function AppointmentsPage() {
           )}
         </StandardizedDialogContent>
       </StandardizedDialog>
+
+      {/* Create Appointment Dialog */}
+      <CreateAppointmentDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onAppointmentCreated={fetchAppointments}
+      />
     </div>
   );
 }

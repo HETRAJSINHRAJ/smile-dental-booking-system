@@ -8,6 +8,7 @@ import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Appointment } from "@/types/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
+import TodayAppointmentsSummary from "@/components/dashboard/TodayAppointmentsSummary";
 
 interface Stats {
   todayAppointments: number;
@@ -140,6 +141,9 @@ export default function AdminDashboard() {
           Welcome back! Here's what's happening with your practice today.
         </p>
       </div>
+
+      {/* Today's Appointments Summary */}
+      <TodayAppointmentsSummary />
 
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

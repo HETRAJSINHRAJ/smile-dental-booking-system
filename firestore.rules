@@ -99,8 +99,9 @@ service cloud.firestore {
       //    and is necessary for the booking system to show available time slots
       allow read: if true;
       
-      // Users can create appointments for themselves
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Users can create appointments for themselves, admins can create appointments for anyone
+      allow create: if isAuthenticated() && 
+                      (request.resource.data.userId == request.auth.uid || isAdmin());
       
       // Users can update their own appointments (for cancellation), admins can update all
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());

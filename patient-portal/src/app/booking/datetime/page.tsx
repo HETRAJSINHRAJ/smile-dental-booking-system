@@ -1,40 +1,51 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { getService, getProvider, getAvailableTimeSlots } from '@/lib/firebase/firestore';
-import type { Service, Provider } from '@/types/firebase';
-import { Loader2, ArrowLeft, Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { toast } from 'sonner';
-import { useCurrency } from '@/lib/localization/useCurrency';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  getService,
+  getProvider,
+  getAvailableTimeSlots,
+} from "@/lib/firebase/firestore";
+import type { Service, Provider } from "@/types/firebase";
+import {
+  Loader2,
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useCurrency } from "@/lib/localization/useCurrency";
 
 function SelectDateTimeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const serviceId = searchParams.get('serviceId');
-  const providerId = searchParams.get('providerId');
+  const serviceId = searchParams.get("serviceId");
+  const providerId = searchParams.get("providerId");
   const { user, loading: authLoading } = useAuth();
   const { formatCurrency } = useCurrency();
 
   const [service, setService] = useState<Service | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [allTimeSlots, setAllTimeSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/auth/login?redirect=/booking');
+      router.push("/auth/login?redirect=/booking");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!serviceId || !providerId) {
-      router.push('/booking');
+      router.push("/booking");
       return;
     }
 
@@ -44,10 +55,10 @@ function SelectDateTimeContent() {
   async function loadData() {
     try {
       setLoading(true);
-      
+
       const [serviceData, providerData] = await Promise.all([
         getService(serviceId!),
-        getProvider(providerId!)
+        getProvider(providerId!),
       ]);
 
       if (!serviceData || !providerData) {
@@ -72,20 +83,55 @@ function SelectDateTimeContent() {
     }
   }, [selectedDate, service, providerId]);
 
+  // Generate all possible time slots for the day
+  const generateAllTimeSlots = () => {
+    const slots = [];
+    const startHour = 9; // 9 AM
+    const endHour = 17; // 5 PM
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeSlot = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        slots.push(timeSlot);
+      }
+    }
+
+    return slots;
+  };
+
+  // Convert 24-hour time to 12-hour format with AM/PM
+  const formatTimeTo12Hour = (time24: string) => {
+    const [hours, minutes] = time24.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+  };
+
   async function loadAvailableSlots() {
     try {
       setLoadingSlots(true);
       const date = new Date(selectedDate);
-      const slots = await getAvailableTimeSlots(providerId!, date, service!.duration);
+      const slots = await getAvailableTimeSlots(
+        providerId!,
+        date,
+        service!.duration,
+      );
       setAvailableSlots(slots);
-      
+
+      // Generate all possible time slots
+      const allSlots = generateAllTimeSlots();
+      setAllTimeSlots(allSlots);
+
       if (slots.length === 0) {
-        toast.info("No available slots for this date. Please select another date.");
+        toast.info(
+          "No available slots for this date. Please select another date.",
+        );
       }
     } catch (error) {
       console.error("Error loading slots:", error);
       toast.error("Failed to load available time slots");
       setAvailableSlots([]);
+      setAllTimeSlots([]);
     } finally {
       setLoadingSlots(false);
     }
@@ -93,7 +139,7 @@ function SelectDateTimeContent() {
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
-    setSelectedTime('');
+    setSelectedTime("");
   };
 
   const handleTimeSelect = (time: string) => {
@@ -102,34 +148,38 @@ function SelectDateTimeContent() {
 
   const handleContinue = () => {
     if (!selectedDate || !selectedTime) {
-      toast.error('Please select both date and time');
+      toast.error("Please select both date and time");
       return;
     }
 
     router.push(
-      `/booking/confirm?serviceId=${serviceId}&providerId=${providerId}&date=${selectedDate}&time=${selectedTime}`
+      `/booking/confirm?serviceId=${serviceId}&providerId=${providerId}&date=${selectedDate}&time=${selectedTime}`,
     );
   };
 
-  // Generate next 30 days for date selection (excluding Sundays)
+  // Generate next 30 days for date selection (excluding today and Sundays)
   const generateDates = () => {
     const dates = [];
     const today = new Date();
-    
-    for (let i = 0; i < 30; i++) {
+
+    for (let i = 1; i < 31; i++) { // Start from tomorrow (i = 1)
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      
+
       // Skip Sundays (day 0)
       if (date.getDay() !== 0) {
         dates.push({
-          value: date.toISOString().split('T')[0],
-          label: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-          fullDate: date
+          value: date.toISOString().split("T")[0],
+          label: date.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+          }),
+          fullDate: date,
         });
       }
     }
-    
+
     return dates;
   };
 
@@ -137,167 +187,260 @@ function SelectDateTimeContent() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="max-w-4xl mx-auto text-center mb-12">
+        <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 mb-6"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
             Back
           </button>
 
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-4">
-            <CalendarIcon className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-4xl font-bold mb-4">Select Date & Time</h1>
-          <p className="text-xl text-muted-foreground mb-4">
-            Step 3 of 4: Choose when you'd like to come in
-          </p>
-
-          {/* Selected Info */}
-          <div className="inline-flex flex-col sm:flex-row gap-4 bg-muted px-6 py-4 rounded-lg mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-sm text-muted-foreground">Service:</p>
-              <p className="font-semibold">{service?.name}</p>
-              <p className="text-xs text-muted-foreground">{service?.duration} min • {formatCurrency(service?.price || 0)}</p>
+              <h1 className="text-2xl font-bold mb-1">Select Date & Time</h1>
+              <p className="text-sm text-muted-foreground">
+                Choose your preferred appointment slot
+              </p>
             </div>
-            <div className="hidden sm:block w-px bg-border" />
-            <div>
-              <p className="text-sm text-muted-foreground">Provider:</p>
-              <p className="font-semibold">{provider?.name}, {provider?.title}</p>
+
+            {/* Progress Indicator */}
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+                  ✓
+                </div>
+                <span className="text-sm font-medium">Service</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+                  ✓
+                </div>
+                <span className="text-sm font-medium">Provider</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+                  3
+                </div>
+                <span className="text-sm font-medium">Date & Time</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-medium">
+                  4
+                </div>
+                <span className="text-sm text-muted-foreground">Confirm</span>
+              </div>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-12 h-2 bg-primary rounded-full" />
-            <div className="w-12 h-2 bg-primary rounded-full" />
-            <div className="w-12 h-2 bg-primary rounded-full" />
-            <div className="w-12 h-2 bg-muted rounded-full" />
+          {/* Selection Summary */}
+          <div className="bg-muted/50 rounded-lg p-4 flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-xs text-muted-foreground mb-1">Service</p>
+              <p className="font-medium text-sm">{service?.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {service?.duration} min • {formatCurrency(service?.price || 0)}
+              </p>
+            </div>
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-xs text-muted-foreground mb-1">Provider</p>
+              <p className="font-medium text-sm">{provider?.name}</p>
+              <p className="text-xs text-muted-foreground">{provider?.title}</p>
+            </div>
+            {selectedDate && selectedTime && (
+              <>
+                <div className="h-8 w-px bg-border hidden sm:block" />
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-xs text-muted-foreground mb-1">Selected</p>
+                  <p className="font-medium text-sm">
+                    {new Date(selectedDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    at {formatTimeTo12Hour(selectedTime)}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Date & Time Selection */}
-        <div className="max-w-5xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Date Selection */}
-            <div className="bg-card rounded-xl shadow-lg p-6 border">
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <CalendarIcon className="w-6 h-6 text-primary" />
-                Select Date
-              </h3>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
-                {dates.map((date) => (
-                  <button
-                    key={date.value}
-                    onClick={() => handleDateSelect(date.value)}
-                    className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
-                      selectedDate === date.value
-                        ? 'border-primary bg-primary/10 shadow-md'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className={`text-sm font-medium ${
-                        selectedDate === date.value ? 'text-primary' : 'text-muted-foreground'
-                      }`}>
-                        {date.fullDate.toLocaleDateString('en-US', { weekday: 'short' })}
-                      </div>
-                      <div className={`text-2xl font-bold ${
-                        selectedDate === date.value ? 'text-primary' : 'text-foreground'
-                      }`}>
-                        {date.fullDate.getDate()}
-                      </div>
-                      <div className={`text-xs ${
-                        selectedDate === date.value ? 'text-primary' : 'text-muted-foreground'
-                      }`}>
-                        {date.fullDate.toLocaleDateString('en-US', { month: 'short' })}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+        {/* Main Content */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          {/* Date Selection */}
+          <div className="bg-card border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarIcon className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Select Date</h2>
             </div>
 
-            {/* Time Selection */}
-            <div className="bg-card rounded-xl shadow-lg p-6 border">
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <Clock className="w-6 h-6 text-primary" />
-                Select Time
-              </h3>
-
-              {!selectedDate ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <CalendarIcon className="w-16 h-16 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Please select a date first</p>
-                </div>
-              ) : loadingSlots ? (
-                <div className="flex items-center justify-center h-64">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : availableSlots.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <Clock className="w-16 h-16 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No available slots for this date</p>
-                  <p className="text-sm text-muted-foreground mt-2">Please select another date</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
-                  {availableSlots.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => handleTimeSelect(slot)}
-                      className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
-                        selectedTime === slot
-                          ? 'border-primary bg-primary/10 text-primary font-bold shadow-md'
-                          : 'border-border hover:border-primary/50'
+            <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-2">
+              {dates.map((date) => (
+                <button
+                  key={date.value}
+                  onClick={() => handleDateSelect(date.value)}
+                  className={`p-3 rounded-lg border transition-all ${
+                    selectedDate === date.value
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                  }`}
+                >
+                  <div className="text-center">
+                    <div
+                      className={`text-xs font-medium mb-1 ${
+                        selectedDate === date.value
+                          ? "text-primary"
+                          : "text-muted-foreground"
                       }`}
                     >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              )}
+                      {date.fullDate.toLocaleDateString("en-US", {
+                        weekday: "short",
+                      })}
+                    </div>
+                    <div
+                      className={`text-xl font-bold ${
+                        selectedDate === date.value
+                          ? "text-primary"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {date.fullDate.getDate()}
+                    </div>
+                    <div
+                      className={`text-xs ${
+                        selectedDate === date.value
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {date.fullDate.toLocaleDateString("en-US", {
+                        month: "short",
+                      })}
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Continue Button */}
-          <div className="mt-8 text-center">
-            <button
-              onClick={handleContinue}
-              disabled={!selectedDate || !selectedTime}
-              className="bg-primary text-primary-foreground px-12 py-4 rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              Continue to Confirmation
-            </button>
+          {/* Time Selection */}
+          <div className="bg-card border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Select Time</h2>
+            </div>
+
+            {!selectedDate ? (
+              <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-3">
+                  <CalendarIcon className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Please select a date first
+                </p>
+              </div>
+            ) : loadingSlots ? (
+              <div className="flex items-center justify-center h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : allTimeSlots.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-3">
+                  <Clock className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  No slots available
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Please select another date
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-4 mb-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded border-2 border-primary bg-primary/10"></div>
+                    <span className="text-muted-foreground">Available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded border-2 border-muted-foreground/30 bg-muted/50"></div>
+                    <span className="text-muted-foreground">Booked</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 max-h-[350px] overflow-y-auto pr-2">
+                  {allTimeSlots.map((slot) => {
+                    const isAvailable = availableSlots.includes(slot);
+                    const isSelected = selectedTime === slot;
+
+                    return (
+                      <button
+                        key={slot}
+                        onClick={() => isAvailable && handleTimeSelect(slot)}
+                        disabled={!isAvailable}
+                        className={`p-3 rounded-lg border text-sm font-medium transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : isAvailable
+                              ? "border-border hover:border-primary/50 hover:bg-muted/50"
+                              : "border-muted-foreground/30 bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                        }`}
+                      >
+                        {formatTimeTo12Hour(slot)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => router.back()}
+            className="px-6 py-3 rounded-lg font-medium border-2 border-border hover:bg-muted/50 transition-colors"
+          >
+            Back
+          </button>
+          <button
+            onClick={handleContinue}
+            disabled={!selectedDate || !selectedTime}
+            className="px-8 py-3 rounded-lg font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Continue
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// Force dynamic rendering to prevent prerendering
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function SelectDateTimePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      }
+    >
       <SelectDateTimeContent />
     </Suspense>
   );

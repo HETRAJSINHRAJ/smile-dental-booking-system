@@ -4,7 +4,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext";
 import AdminSidebar from "@/components/layout/AdminSidebar";
+import AdminHeader from "@/components/layout/AdminHeader";
 import { AdminGuard } from "@/components/layout/AdminGuard";
 import { usePathname } from "next/navigation";
 import Head from "next/head";
@@ -19,6 +21,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isExpanded } = useSidebar();
+  
+  return (
+    <div className="admin-layout flex h-screen bg-muted/30">
+      <AdminSidebar />
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${
+        isExpanded ? 'ml-64' : 'ml-16'
+      }`}>
+        <AdminHeader />
+        <main className="flex-1 overflow-y-auto">
+          <div className="container mx-auto p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth');
@@ -31,14 +53,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // For protected pages, wrap with AdminGuard and show sidebar
   return (
     <AdminGuard>
-      <div className="admin-layout flex h-screen bg-muted/30">
-        <AdminSidebar />
-        <main className="flex-1 ml-64 overflow-y-auto">
-          <div className="container mx-auto p-6">
-            {children}
-          </div>
-        </main>
-      </div>
+      <SidebarProvider>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </SidebarProvider>
     </AdminGuard>
   );
 }
