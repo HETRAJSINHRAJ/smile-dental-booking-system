@@ -1,9 +1,24 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Users, Search, Mail, Phone, Calendar, Eye, Clock, FileText, Hash, MapPin, Shield, AlertCircle, Heart, Cake } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect } from "react";
+import {
+  Users,
+  Search,
+  Mail,
+  Phone,
+  Calendar,
+  Eye,
+  Clock,
+  FileText,
+  Hash,
+  MapPin,
+  Shield,
+  AlertCircle,
+  Heart,
+  Cake,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,21 +26,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   StandardizedDialog,
   StandardizedDialogContent,
   StandardizedDialogHeader,
   StandardizedDialogTitle,
   StandardizedDialogBody,
-} from '@/components/ui/standardized-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { getAllDocuments, getDocument } from '@/lib/firebase/firestore';
-import type { Appointment, UserProfile } from '@/types/firebase';
-import { toast } from 'sonner';
-import { Timestamp } from 'firebase/firestore';
+} from "@/components/ui/standardized-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { getAllDocuments, getDocument } from "@/lib/firebase/firestore";
+import type { Appointment, UserProfile } from "@/types/firebase";
+import { toast } from "sonner";
+import { Timestamp } from "firebase/firestore";
 
 interface PatientWithAppointments {
   userId: string;
@@ -42,10 +57,13 @@ interface PatientWithAppointments {
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<PatientWithAppointments[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<PatientWithAppointments[]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<
+    PatientWithAppointments[]
+  >([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState<PatientWithAppointments | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPatient, setSelectedPatient] =
+    useState<PatientWithAppointments | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -59,67 +77,87 @@ export default function PatientsPage() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const appointments = await getAllDocuments<Appointment>('appointments');
 
-      // Group appointments by patient
-      const patientMap = new Map<string, PatientWithAppointments>();
+      // Fetch all users from users collection
+      const allUsers = await getAllDocuments<UserProfile>("users");
 
-      appointments.forEach(apt => {
-        const key = apt.userEmail;
+      // Fetch all appointments
+      const appointments = await getAllDocuments<Appointment>("appointments");
 
-        if (!patientMap.has(key)) {
-          patientMap.set(key, {
-            userId: apt.userId,
-            userName: apt.userName,
-            userEmail: apt.userEmail,
-            userPhone: apt.userPhone || '',
-            totalAppointments: 0,
-            completedAppointments: 0,
-            upcomingAppointments: 0,
-            appointments: [],
-          });
+      // Create a map to store appointment data by userId
+      const appointmentMap = new Map<string, Appointment[]>();
+
+      appointments.forEach((apt) => {
+        if (!appointmentMap.has(apt.userId)) {
+          appointmentMap.set(apt.userId, []);
         }
-
-        const patient = patientMap.get(key)!;
-        patient.appointments.push(apt);
-        patient.totalAppointments++;
-
-        if (apt.status === 'completed') {
-          patient.completedAppointments++;
-        }
-
-        const now = new Date();
-        const aptDate = apt.appointmentDate.toDate();
-        if (aptDate >= now && (apt.status === 'pending' || apt.status === 'confirmed')) {
-          patient.upcomingAppointments++;
-        }
-
-        // Update last appointment date
-        if (!patient.lastAppointment || apt.appointmentDate.toMillis() > patient.lastAppointment.toMillis()) {
-          patient.lastAppointment = apt.appointmentDate;
-        }
+        appointmentMap.get(apt.userId)!.push(apt);
       });
 
-      // Fetch user profiles for each patient
-      const patientsArray = Array.from(patientMap.values());
-      await Promise.all(
-        patientsArray.map(async (patient) => {
-          try {
-            const profile = await getDocument<UserProfile>('users', patient.userId);
-            if (profile) {
-              patient.profile = profile;
+      // Build patient list from all users
+      const patientsArray: PatientWithAppointments[] = allUsers.map(
+        (userProfile) => {
+          const userAppointments = appointmentMap.get(userProfile.uid) || [];
+
+          // Calculate appointment statistics
+          let completedCount = 0;
+          let upcomingCount = 0;
+          let lastAppointmentDate: Timestamp | undefined;
+
+          const now = new Date();
+
+          userAppointments.forEach((apt) => {
+            if (apt.status === "completed") {
+              completedCount++;
             }
-          } catch (error) {
-            console.error(`Error fetching profile for user ${patient.userId}:`, error);
-            // Continue even if profile fetch fails
-          }
-        })
+
+            const aptDate = apt.appointmentDate.toDate();
+            if (
+              aptDate >= now &&
+              (apt.status === "pending" || apt.status === "confirmed")
+            ) {
+              upcomingCount++;
+            }
+
+            if (
+              !lastAppointmentDate ||
+              apt.appointmentDate.toMillis() > lastAppointmentDate.toMillis()
+            ) {
+              lastAppointmentDate = apt.appointmentDate;
+            }
+          });
+
+          return {
+            userId: userProfile.uid,
+            userName: userProfile.fullName,
+            userEmail: userProfile.email,
+            userPhone: userProfile.phone,
+            totalAppointments: userAppointments.length,
+            completedAppointments: completedCount,
+            upcomingAppointments: upcomingCount,
+            lastAppointment: lastAppointmentDate,
+            appointments: userAppointments,
+            profile: userProfile,
+          };
+        },
       );
+
+      // Sort by most recent activity (users with appointments first, then by last appointment date)
+      patientsArray.sort((a, b) => {
+        if (a.totalAppointments === 0 && b.totalAppointments === 0) return 0;
+        if (a.totalAppointments === 0) return 1;
+        if (b.totalAppointments === 0) return -1;
+
+        if (a.lastAppointment && b.lastAppointment) {
+          return b.lastAppointment.toMillis() - a.lastAppointment.toMillis();
+        }
+        return 0;
+      });
 
       setPatients(patientsArray);
     } catch (error) {
-      console.error('Error fetching patients:', error);
-      toast.error('Failed to load patients');
+      console.error("Error fetching patients:", error);
+      toast.error("Failed to load patients");
     } finally {
       setLoading(false);
     }
@@ -133,10 +171,12 @@ export default function PatientsPage() {
 
     const term = searchTerm.toLowerCase();
     const filtered = patients.filter(
-      patient =>
+      (patient) =>
         (patient.userName && patient.userName.toLowerCase().includes(term)) ||
         (patient.userEmail && patient.userEmail.toLowerCase().includes(term)) ||
-        (patient.userPhone && patient.userPhone.toLowerCase().includes(term))
+        (patient.userPhone && patient.userPhone.toLowerCase().includes(term)) ||
+        (patient.profile?.fullName &&
+          patient.profile.fullName.toLowerCase().includes(term)),
     );
 
     setFilteredPatients(filtered);
@@ -144,18 +184,18 @@ export default function PatientsPage() {
 
   const formatDate = (date: Date | Timestamp) => {
     const dateObj = date instanceof Timestamp ? date.toDate() : date;
-    return dateObj.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return dateObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatTime = (time: string | undefined) => {
-    if (!time) return 'N/A';
-    const [hours, minutes] = time.split(':');
+    if (!time) return "N/A";
+    const [hours, minutes] = time.split(":");
     const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
   };
@@ -165,7 +205,9 @@ export default function PatientsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Patients</h1>
-          <p className="text-muted-foreground">View and manage patient records</p>
+          <p className="text-muted-foreground">
+            View and manage patient records
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="px-3 py-1">
@@ -194,8 +236,8 @@ export default function PatientsPage() {
           <h3 className="text-lg font-semibold mb-2">No patients found</h3>
           <p className="text-muted-foreground">
             {searchTerm
-              ? 'Try adjusting your search term'
-              : 'No patients have booked appointments yet'}
+              ? "Try adjusting your search term"
+              : "No patients have booked appointments yet"}
           </p>
         </div>
       ) : (
@@ -233,12 +275,18 @@ export default function PatientsPage() {
                     <Badge variant="outline">{patient.totalAppointments}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                    <Badge
+                      variant="outline"
+                      className="bg-green-500/10 text-green-500"
+                    >
                       {patient.completedAppointments}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-500/10 text-blue-500"
+                    >
                       {patient.upcomingAppointments}
                     </Badge>
                   </TableCell>
@@ -274,7 +322,10 @@ export default function PatientsPage() {
 
       {/* Patient Details Dialog */}
       <StandardizedDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <StandardizedDialogContent size="3xl" className="max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <StandardizedDialogContent
+          size="3xl"
+          className="max-h-[90vh] overflow-hidden flex flex-col p-0"
+        >
           <StandardizedDialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
             <StandardizedDialogTitle>Patient Profile</StandardizedDialogTitle>
           </StandardizedDialogHeader>
@@ -282,272 +333,374 @@ export default function PatientsPage() {
           {selectedPatient && (
             <StandardizedDialogBody className="overflow-y-auto flex-1 px-6 py-4">
               <div className="space-y-6">
-              {/* Personal Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Users className="h-5 w-5" />
-                    Personal Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground mb-1">Full Name</p>
-                      <p className="font-medium">{selectedPatient.profile?.fullName || selectedPatient.userName}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground mb-1">Email</p>
-                      <p className="font-medium flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {selectedPatient.userEmail}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground mb-1">Phone</p>
-                      <p className="font-medium flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {selectedPatient.profile?.phone || selectedPatient.userPhone || 'Not provided'}
-                      </p>
-                    </div>
-                    {selectedPatient.profile?.dateOfBirth && (
+                {/* Personal Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Users className="h-5 w-5" />
+                      Personal Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground mb-1">Date of Birth</p>
-                        <p className="font-medium flex items-center gap-2">
-                          <Cake className="h-4 w-4" />
-                          {selectedPatient.profile.dateOfBirth.toDate().toLocaleDateString()}
+                        <p className="text-muted-foreground mb-1">Full Name</p>
+                        <p className="font-medium">
+                          {selectedPatient.profile?.fullName ||
+                            selectedPatient.userName}
                         </p>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Address */}
-              {selectedPatient.profile?.address && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <MapPin className="h-5 w-5" />
-                      Address
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm">
-                    <p>{selectedPatient.profile.address.street}</p>
-                    <p>{selectedPatient.profile.address.city}, {selectedPatient.profile.address.state} {selectedPatient.profile.address.zipCode}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Insurance Information */}
-              {selectedPatient.profile?.insurance && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Shield className="h-5 w-5" />
-                      Insurance Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground mb-1">Provider</p>
-                        <p className="font-medium">{selectedPatient.profile.insurance.provider}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Policy Number</p>
-                        <p className="font-medium font-mono">{selectedPatient.profile.insurance.policyNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Group Number</p>
-                        <p className="font-medium font-mono">{selectedPatient.profile.insurance.groupNumber}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Emergency Contact */}
-              {selectedPatient.profile?.emergencyContact && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <AlertCircle className="h-5 w-5" />
-                      Emergency Contact
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground mb-1">Name</p>
-                        <p className="font-medium">{selectedPatient.profile.emergencyContact.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Relationship</p>
-                        <p className="font-medium">{selectedPatient.profile.emergencyContact.relationship}</p>
+                        <p className="text-muted-foreground mb-1">Email</p>
+                        <p className="font-medium flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          {selectedPatient.userEmail}
+                        </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground mb-1">Phone</p>
                         <p className="font-medium flex items-center gap-2">
                           <Phone className="h-4 w-4" />
-                          {selectedPatient.profile.emergencyContact.phone}
+                          {selectedPatient.profile?.phone ||
+                            selectedPatient.userPhone ||
+                            "Not provided"}
                         </p>
                       </div>
+                      {selectedPatient.profile?.dateOfBirth && (
+                        <div>
+                          <p className="text-muted-foreground mb-1">
+                            Date of Birth
+                          </p>
+                          <p className="font-medium flex items-center gap-2">
+                            <Cake className="h-4 w-4" />
+                            {selectedPatient.profile.dateOfBirth
+                              .toDate()
+                              .toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-              )}
 
-              {/* Medical History */}
-              {selectedPatient.profile?.medicalHistory && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Heart className="h-5 w-5 text-red-500" />
-                      Medical History
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {selectedPatient.profile.medicalHistory.allergies && selectedPatient.profile.medicalHistory.allergies.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Allergies</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedPatient.profile.medicalHistory.allergies.map((allergy, idx) => (
-                            <Badge key={idx} variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                              {allergy}
-                            </Badge>
-                          ))}
+                {/* Address */}
+                {selectedPatient.profile?.address && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <MapPin className="h-5 w-5" />
+                        Address
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <p>{selectedPatient.profile.address.street}</p>
+                      <p>
+                        {selectedPatient.profile.address.city},{" "}
+                        {selectedPatient.profile.address.state}{" "}
+                        {selectedPatient.profile.address.zipCode}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Insurance Information */}
+                {selectedPatient.profile?.insurance && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Shield className="h-5 w-5" />
+                        Insurance Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground mb-1">Provider</p>
+                          <p className="font-medium">
+                            {selectedPatient.profile.insurance.provider}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">
+                            Policy Number
+                          </p>
+                          <p className="font-medium font-mono">
+                            {selectedPatient.profile.insurance.policyNumber}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">
+                            Group Number
+                          </p>
+                          <p className="font-medium font-mono">
+                            {selectedPatient.profile.insurance.groupNumber}
+                          </p>
                         </div>
                       </div>
-                    )}
-                    {selectedPatient.profile.medicalHistory.medications && selectedPatient.profile.medicalHistory.medications.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Current Medications</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedPatient.profile.medicalHistory.medications.map((med, idx) => (
-                            <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {med}
-                            </Badge>
-                          ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Emergency Contact */}
+                {selectedPatient.profile?.emergencyContact && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <AlertCircle className="h-5 w-5" />
+                        Emergency Contact
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground mb-1">Name</p>
+                          <p className="font-medium">
+                            {selectedPatient.profile.emergencyContact.name}
+                          </p>
                         </div>
-                      </div>
-                    )}
-                    {selectedPatient.profile.medicalHistory.conditions && selectedPatient.profile.medicalHistory.conditions.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Medical Conditions</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedPatient.profile.medicalHistory.conditions.map((condition, idx) => (
-                            <Badge key={idx} variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                              {condition}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {selectedPatient.profile.medicalHistory.notes && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Additional Notes</p>
-                        <p className="text-sm bg-muted/50 p-3 rounded-md">{selectedPatient.profile.medicalHistory.notes}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <Separator />
-
-              {/* Statistics */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="text-2xl font-bold">{selectedPatient.totalAppointments}</div>
-                  <div className="text-sm text-muted-foreground">Total Appointments</div>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-500">{selectedPatient.completedAppointments}</div>
-                  <div className="text-sm text-muted-foreground">Completed</div>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-500">{selectedPatient.upcomingAppointments}</div>
-                  <div className="text-sm text-muted-foreground">Upcoming</div>
-                </div>
-              </div>
-
-              {/* Appointment History */}
-              <div>
-                <h4 className="font-semibold mb-3">Appointment History</h4>
-                <div className="space-y-3">
-                  {selectedPatient.appointments
-                    .sort((a, b) => b.appointmentDate.toMillis() - a.appointmentDate.toMillis())
-                    .map((apt) => (
-                      <div key={apt.id} className="border rounded-lg overflow-hidden">
-                        <div className="flex items-center justify-between p-3 bg-muted/30">
-                          <div className="flex-1">
-                            <div className="font-medium text-base">{apt.serviceName}</div>
-                            <div className="text-sm text-muted-foreground">
-                              with {apt.providerName}
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={
-                              apt.status === 'completed'
-                                ? 'bg-green-500/10 text-green-500'
-                                : apt.status === 'confirmed'
-                                ? 'bg-blue-500/10 text-blue-500'
-                                : apt.status === 'pending'
-                                ? 'bg-yellow-500/10 text-yellow-500'
-                                : 'bg-red-500/10 text-red-500'
+                        <div>
+                          <p className="text-muted-foreground mb-1">
+                            Relationship
+                          </p>
+                          <p className="font-medium">
+                            {
+                              selectedPatient.profile.emergencyContact
+                                .relationship
                             }
-                          >
-                            {apt.status}
-                          </Badge>
+                          </p>
                         </div>
-
-                        <div className="p-3 space-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{formatDate(apt.appointmentDate)}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span>{formatTime(apt.startTime)} - {formatTime(apt.endTime)}</span>
-                          </div>
-                          {apt.confirmationNumber && (
-                            <div className="flex items-center gap-2">
-                              <Hash className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-mono">{apt.confirmationNumber}</span>
-                            </div>
-                          )}
-                          {apt.notes && (
-                            <div className="mt-2 pt-2 border-t">
-                              <div className="flex items-start gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                <div>
-                                  <div className="text-xs font-medium text-muted-foreground uppercase mb-1">Patient Notes</div>
-                                  <div className="text-sm text-gray-900">{apt.notes}</div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          {apt.adminNotes && (
-                            <div className="mt-2 pt-2 border-t">
-                              <div className="flex items-start gap-2">
-                                <FileText className="h-4 w-4 text-blue-500 mt-0.5" />
-                                <div>
-                                  <div className="text-xs font-medium text-blue-600 uppercase mb-1">Admin Notes</div>
-                                  <div className="text-sm text-gray-900 bg-blue-50 p-2 rounded border border-blue-200">{apt.adminNotes}</div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground pt-2 border-t">
-                            Created: {formatDate(apt.createdAt)}
-                          </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">Phone</p>
+                          <p className="font-medium flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            {selectedPatient.profile.emergencyContact.phone}
+                          </p>
                         </div>
                       </div>
-                    ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Medical History */}
+                {selectedPatient.profile?.medicalHistory && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Heart className="h-5 w-5 text-red-500" />
+                        Medical History
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedPatient.profile.medicalHistory.allergies &&
+                        selectedPatient.profile.medicalHistory.allergies
+                          .length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-2">
+                              Allergies
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedPatient.profile.medicalHistory.allergies.map(
+                                (allergy, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="bg-red-50 text-red-700 border-red-200"
+                                  >
+                                    {allergy}
+                                  </Badge>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      {selectedPatient.profile.medicalHistory.medications &&
+                        selectedPatient.profile.medicalHistory.medications
+                          .length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-2">
+                              Current Medications
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedPatient.profile.medicalHistory.medications.map(
+                                (med, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="bg-blue-50 text-blue-700 border-blue-200"
+                                  >
+                                    {med}
+                                  </Badge>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      {selectedPatient.profile.medicalHistory.conditions &&
+                        selectedPatient.profile.medicalHistory.conditions
+                          .length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-2">
+                              Medical Conditions
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedPatient.profile.medicalHistory.conditions.map(
+                                (condition, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  >
+                                    {condition}
+                                  </Badge>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      {selectedPatient.profile.medicalHistory.notes && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
+                            Additional Notes
+                          </p>
+                          <p className="text-sm bg-muted/50 p-3 rounded-md">
+                            {selectedPatient.profile.medicalHistory.notes}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Separator />
+
+                {/* Statistics */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold">
+                      {selectedPatient.totalAppointments}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total Appointments
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-green-500">
+                      {selectedPatient.completedAppointments}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Completed
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-blue-500">
+                      {selectedPatient.upcomingAppointments}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Upcoming
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                {/* Appointment History */}
+                <div>
+                  <h4 className="font-semibold mb-3">Appointment History</h4>
+                  <div className="space-y-3">
+                    {selectedPatient.appointments
+                      .sort(
+                        (a, b) =>
+                          b.appointmentDate.toMillis() -
+                          a.appointmentDate.toMillis(),
+                      )
+                      .map((apt) => (
+                        <div
+                          key={apt.id}
+                          className="border rounded-lg overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between p-3 bg-muted/30">
+                            <div className="flex-1">
+                              <div className="font-medium text-base">
+                                {apt.serviceName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                with {apt.providerName}
+                              </div>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                apt.status === "completed"
+                                  ? "bg-green-500/10 text-green-500"
+                                  : apt.status === "confirmed"
+                                    ? "bg-blue-500/10 text-blue-500"
+                                    : apt.status === "pending"
+                                      ? "bg-yellow-500/10 text-yellow-500"
+                                      : "bg-red-500/10 text-red-500"
+                              }
+                            >
+                              {apt.status}
+                            </Badge>
+                          </div>
+
+                          <div className="p-3 space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">
+                                {formatDate(apt.appointmentDate)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span>
+                                {formatTime(apt.startTime)} -{" "}
+                                {formatTime(apt.endTime)}
+                              </span>
+                            </div>
+                            {apt.confirmationNumber && (
+                              <div className="flex items-center gap-2">
+                                <Hash className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-mono">
+                                  {apt.confirmationNumber}
+                                </span>
+                              </div>
+                            )}
+                            {apt.notes && (
+                              <div className="mt-2 pt-2 border-t">
+                                <div className="flex items-start gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                  <div>
+                                    <div className="text-xs font-medium text-muted-foreground uppercase mb-1">
+                                      Patient Notes
+                                    </div>
+                                    <div className="text-sm text-gray-900">
+                                      {apt.notes}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {apt.adminNotes && (
+                              <div className="mt-2 pt-2 border-t">
+                                <div className="flex items-start gap-2">
+                                  <FileText className="h-4 w-4 text-blue-500 mt-0.5" />
+                                  <div>
+                                    <div className="text-xs font-medium text-blue-600 uppercase mb-1">
+                                      Admin Notes
+                                    </div>
+                                    <div className="text-sm text-gray-900 bg-blue-50 p-2 rounded border border-blue-200">
+                                      {apt.adminNotes}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground pt-2 border-t">
+                              Created: {formatDate(apt.createdAt)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             </StandardizedDialogBody>
           )}

@@ -89,9 +89,6 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         
         {showValidation && phoneNumber && isValid && (
           <div className="text-sm space-y-1">
-            <p className="text-green-600">
-              Valid Indian {validation.type === 'mobile' ? 'mobile' : 'landline'} number
-            </p>
             
             {showTelecomCircle && telecomCircle && (
               <p className="text-gray-600">
@@ -105,12 +102,6 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
                 canReceiveSMS ? "text-green-600" : "text-orange-600"
               )}>
                 {canReceiveSMS ? "✓ Can receive SMS/OTP" : "⚠ SMS delivery not guaranteed"}
-              </p>
-            )}
-            
-            {formattedNumber !== phoneNumber && (
-              <p className="text-gray-600">
-                Formatted: {formattedNumber}
               </p>
             )}
           </div>

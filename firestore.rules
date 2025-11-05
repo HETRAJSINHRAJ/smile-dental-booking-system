@@ -116,5 +116,19 @@ service cloud.firestore {
       // Only admins can read, update, or delete inquiries
       allow read, update, delete: if isAdmin();
     }
+    
+    // Payment audit logs collection
+    match /payment_audit_logs/{logId} {
+      // Allow creation of payment audit logs for authenticated users
+      // This is necessary for payment tracking and debugging
+      allow create: if isAuthenticated();
+      
+      // Users can read their own payment logs, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.patientId == request.auth.uid || isAdmin());
+      
+      // Only admins can update or delete payment logs
+      allow update, delete: if isAdmin();
+    }
   }
 }

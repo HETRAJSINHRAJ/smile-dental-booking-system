@@ -1,60 +1,76 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getAppointment } from '@/lib/firebase/firestore';
-import type { Appointment } from '@/types/firebase';
-import { CheckCircle, Calendar, Mail, Phone, Home, Loader2 } from 'lucide-react';
-import Link from 'next/link';
-import { toast } from 'sonner';
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getAppointment } from "@/lib/firebase/firestore";
+import type { Appointment } from "@/types/firebase";
+import {
+  CheckCircle,
+  Calendar,
+  Mail,
+  Phone,
+  Home,
+  Loader2,
+  FileText,
+} from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { ReceiptDocument } from "@/components/payment/PaymentReceiptPDF";
 
 function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const appointmentId = searchParams.get('appointmentId');
+  const appointmentId = searchParams.get("appointmentId");
 
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!appointmentId) {
-      router.push('/booking');
-      return;
-    }
+  // Get payment details from URL params for receipt
+  const transactionId = searchParams.get("transactionId");
+  const amount = searchParams.get("amount");
+  const reservationFee = searchParams.get("reservationFee");
+  const tax = searchParams.get("tax");
 
-    loadAppointment();
-  }, [appointmentId]);
-
-  async function loadAppointment() {
+  const loadAppointment = React.useCallback(async () => {
     try {
       const data = await getAppointment(appointmentId!);
       if (!data) {
         toast.error("Appointment not found");
-        router.push('/booking');
+        router.push("/booking");
         return;
       }
       setAppointment(data);
     } catch (error) {
-      console.error('Error fetching appointment:', error);
+      console.error("Error fetching appointment:", error);
       toast.error("Failed to load appointment details");
     } finally {
       setLoading(false);
     }
-  }
+  }, [appointmentId, router]);
+
+  useEffect(() => {
+    if (!appointmentId) {
+      router.push("/booking");
+      return;
+    }
+
+    loadAppointment();
+  }, [appointmentId, router, loadAppointment]);
 
   const handleAddToCalendar = () => {
     if (!appointment) return;
 
     const appointmentDate = appointment.appointmentDate.toDate();
     const startDateTime = new Date(
-      `${appointmentDate.toISOString().split('T')[0]}T${appointment.startTime}`
+      `${appointmentDate.toISOString().split("T")[0]}T${appointment.startTime}`,
     );
     const endDateTime = new Date(
-      `${appointmentDate.toISOString().split('T')[0]}T${appointment.endTime}`
+      `${appointmentDate.toISOString().split("T")[0]}T${appointment.endTime}`,
     );
 
     const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     };
 
     const icsContent = `BEGIN:VCALENDAR
@@ -68,14 +84,14 @@ LOCATION:Smile Dental Practice
 END:VEVENT
 END:VCALENDAR`;
 
-    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const blob = new Blob([icsContent], { type: "text/calendar" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'dental-appointment.ics';
+    link.download = "dental-appointment.ics";
     link.click();
     URL.revokeObjectURL(url);
-    toast.success('Calendar event downloaded!');
+    toast.success("Calendar event downloaded!");
   };
 
   if (loading) {
@@ -92,7 +108,9 @@ END:VCALENDAR`;
         <div className="text-center">
           <div className="text-6xl mb-4">❌</div>
           <h2 className="text-2xl font-bold mb-2">Appointment Not Found</h2>
-          <p className="text-muted-foreground mb-6">We couldn't find your appointment details.</p>
+          <p className="text-muted-foreground mb-6">
+            We couldn&apos;t find your appointment details.
+          </p>
           <Link
             href="/booking"
             className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90"
@@ -104,14 +122,54 @@ END:VCALENDAR`;
     );
   }
 
-  const formattedDate = appointment.appointmentDate.toDate().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const formattedDate = appointment.appointmentDate
+    .toDate()
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
-  const confirmationNumber = appointment.confirmationNumber || appointmentId!.substring(0, 8).toUpperCase();
+  const confirmationNumber =
+    appointment.confirmationNumber ||
+    appointmentId!.substring(0, 8).toUpperCase();
+
+  // Prepare data for PDF receipt
+  const appointmentData = appointment
+    ? {
+        id: appointmentId || "",
+        serviceName: appointment.serviceName || "",
+        providerName: appointment.providerName || "",
+        date: appointment.appointmentDate?.toDate().toISOString() || "",
+        time: `${appointment.startTime} - ${appointment.endTime}`,
+        patientName: appointment.userName || "",
+        patientEmail: appointment.userEmail || "",
+        patientPhone: appointment.userPhone || "",
+      }
+    : null;
+
+  const paymentData =
+    transactionId && amount
+      ? {
+          transactionId: transactionId || "N/A",
+          amount: parseFloat(reservationFee || "0"),
+          taxAmount: parseFloat(tax || "0"),
+          totalAmount: parseFloat(amount || "0"),
+          paymentMethod: "online",
+          paymentDate: new Date().toISOString(),
+          paymentDescription: "Appointment Reservation Fee",
+        }
+      : null;
+
+  const servicePaymentInfo = appointment?.servicePaymentAmount
+    ? {
+        serviceAmount: appointment.servicePaymentAmount / 1.18,
+        serviceTax: (appointment.servicePaymentAmount * 0.18) / 1.18,
+        serviceTotal: appointment.servicePaymentAmount,
+        paymentDue: "At the clinic during your visit",
+      }
+    : undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 py-12">
@@ -121,23 +179,29 @@ END:VCALENDAR`;
           <div className="inline-flex items-center justify-center w-24 h-24 bg-green-100 dark:bg-green-900 rounded-full mb-6 animate-bounce">
             <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400" />
           </div>
-          
+
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Appointment Confirmed! 🎉
           </h1>
           <p className="text-xl text-muted-foreground mb-2">
-            We're looking forward to seeing you!
+            We&apos;re looking forward to seeing you!
           </p>
           <div className="inline-block bg-card px-6 py-3 rounded-lg shadow-md border">
-            <p className="text-sm text-muted-foreground mb-1">Confirmation Number</p>
-            <p className="text-2xl font-mono font-bold text-primary">{confirmationNumber}</p>
+            <p className="text-sm text-muted-foreground mb-1">
+              Confirmation Number
+            </p>
+            <p className="text-2xl font-mono font-bold text-primary">
+              {confirmationNumber}
+            </p>
           </div>
         </div>
 
         {/* Appointment Details Card */}
         <div className="max-w-3xl mx-auto bg-card rounded-2xl shadow-2xl overflow-hidden mb-8 border">
           <div className="bg-primary text-primary-foreground p-8 text-center">
-            <h2 className="text-3xl font-bold mb-2">Your Appointment Details</h2>
+            <h2 className="text-3xl font-bold mb-2">
+              Your Appointment Details
+            </h2>
             <p className="opacity-90">Please save this information</p>
           </div>
 
@@ -150,7 +214,9 @@ END:VCALENDAR`;
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Service</p>
-                  <p className="text-lg font-semibold">{appointment.serviceName}</p>
+                  <p className="text-lg font-semibold">
+                    {appointment.serviceName}
+                  </p>
                 </div>
               </div>
 
@@ -161,7 +227,9 @@ END:VCALENDAR`;
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Provider</p>
-                  <p className="text-lg font-semibold">{appointment.providerName}</p>
+                  <p className="text-lg font-semibold">
+                    {appointment.providerName}
+                  </p>
                 </div>
               </div>
 
@@ -196,11 +264,17 @@ END:VCALENDAR`;
               <ul className="space-y-2 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">✓</span>
-                  <span>A confirmation email has been sent to {appointment.userEmail}</span>
+                  <span>
+                    A confirmation email has been sent to{" "}
+                    {appointment.userEmail}
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">✓</span>
-                  <span>Please arrive 10 minutes early to complete any necessary paperwork</span>
+                  <span>
+                    Please arrive 10 minutes early to complete any necessary
+                    paperwork
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">✓</span>
@@ -208,7 +282,10 @@ END:VCALENDAR`;
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">✓</span>
-                  <span>We'll send you a reminder 24 hours before your appointment</span>
+                  <span>
+                    We&apos;ll send you a reminder 24 hours before your
+                    appointment
+                  </span>
                 </li>
               </ul>
             </div>
@@ -222,12 +299,33 @@ END:VCALENDAR`;
                 <Calendar className="w-5 h-5" />
                 Add to Calendar
               </button>
-              <Link
-                href="/"
-                className="flex items-center justify-center gap-2 border-2 border-primary text-primary px-6 py-3 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
-              >
-                View My Appointments
-              </Link>
+              {appointmentData && paymentData ? (
+                <PDFDownloadLink
+                  document={
+                    <ReceiptDocument
+                      appointmentData={appointmentData}
+                      paymentData={paymentData}
+                      servicePaymentInfo={servicePaymentInfo}
+                    />
+                  }
+                  fileName={`receipt-${transactionId || "appointment"}.pdf`}
+                  className="flex items-center justify-center gap-2 border-2 border-primary text-primary px-6 py-3 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
+                >
+                  {({ loading }) => (
+                    <>
+                      <FileText className="w-5 h-5" />
+                      {loading ? "Preparing..." : "Download Receipt"}
+                    </>
+                  )}
+                </PDFDownloadLink>
+              ) : (
+                <Link
+                  href="/"
+                  className="flex items-center justify-center gap-2 border-2 border-primary text-primary px-6 py-3 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
+                >
+                  View My Appointments
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -243,7 +341,10 @@ END:VCALENDAR`;
                 <Phone className="w-6 h-6 text-primary" />
               </div>
               <p className="font-semibold mb-1">Call Us</p>
-              <a href="tel:+15551234567" className="text-primary hover:underline">
+              <a
+                href="tel:+15551234567"
+                className="text-primary hover:underline"
+              >
                 (555) 123-4567
               </a>
             </div>
@@ -252,13 +353,17 @@ END:VCALENDAR`;
                 <Mail className="w-6 h-6 text-primary" />
               </div>
               <p className="font-semibold mb-1">Email Us</p>
-              <a href="mailto:info@smiledental.com" className="text-primary hover:underline">
+              <a
+                href="mailto:info@smiledental.com"
+                className="text-primary hover:underline"
+              >
                 info@smiledental.com
               </a>
             </div>
           </div>
           <p className="text-center text-sm text-muted-foreground mt-6">
-            To cancel or reschedule, please contact us at least 24 hours in advance
+            To cancel or reschedule, please contact us at least 24 hours in
+            advance
           </p>
         </div>
 
@@ -285,15 +390,17 @@ END:VCALENDAR`;
 }
 
 // Force dynamic rendering to prevent prerendering
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function BookingSuccessPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      }
+    >
       <BookingSuccessContent />
     </Suspense>
   );

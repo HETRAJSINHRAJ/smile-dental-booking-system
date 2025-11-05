@@ -1,39 +1,50 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
-import { ArrowLeft, Star, Award, Languages, CheckCircle2, GraduationCap, Loader2 } from 'lucide-react';
-import { getProviders } from '@/lib/firebase/firestore';
-import { Provider } from '@/types/firebase';
-import { useCurrency } from '@/lib/localization/useCurrency';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import {
+  ArrowLeft,
+  Star,
+  Award,
+  Languages,
+  CheckCircle2,
+  GraduationCap,
+  Loader2,
+  User,
+} from "lucide-react";
+import { getProviders } from "@/lib/firebase/firestore";
+import { Provider } from "@/types/firebase";
+import { useCurrency } from "@/lib/localization/useCurrency";
 
 // Force dynamic rendering to prevent prerendering
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 function SelectProviderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { formatCurrency } = useCurrency();
-  
+
   const [service, setService] = useState<any>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterSpecialty, setFilterSpecialty] = useState('all');
-  const [sortBy, setSortBy] = useState<'rating' | 'experience' | 'name'>('rating');
+  const [filterSpecialty, setFilterSpecialty] = useState("all");
+  const [sortBy, setSortBy] = useState<"rating" | "experience" | "name">(
+    "rating",
+  );
 
   useEffect(() => {
-    const serviceId = searchParams.get('serviceId');
-    const serviceName = searchParams.get('serviceName');
-    const servicePrice = searchParams.get('servicePrice');
-    const serviceDuration = searchParams.get('serviceDuration');
-    
+    const serviceId = searchParams.get("serviceId");
+    const serviceName = searchParams.get("serviceName");
+    const servicePrice = searchParams.get("servicePrice");
+    const serviceDuration = searchParams.get("serviceDuration");
+
     if (serviceId && serviceName && servicePrice && serviceDuration) {
       setService({
         id: serviceId,
         name: serviceName,
         price: parseFloat(servicePrice),
-        duration: parseInt(serviceDuration)
+        duration: parseInt(serviceDuration),
       });
     }
 
@@ -45,7 +56,7 @@ function SelectProviderContent() {
       const providersData = await getProviders();
       setProviders(providersData);
     } catch (error) {
-      console.error('Error loading providers:', error);
+      console.error("Error loading providers:", error);
     } finally {
       setLoading(false);
     }
@@ -53,24 +64,35 @@ function SelectProviderContent() {
 
   const handleProviderSelect = (provider: Provider) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('providerId', provider.id);
-    params.set('providerName', provider.name);
-    params.set('providerTitle', provider.title);
-    params.set('providerSpecialty', provider.specialty);
+    params.set("providerId", provider.id);
+    params.set("providerName", provider.name);
+    params.set("providerTitle", provider.title);
+    params.set("providerSpecialty", provider.specialty);
     router.push(`/booking/datetime?${params.toString()}`);
   };
 
-  const specialties = ['all', 'General Dentistry', 'Orthodontics', 'Periodontics', 'Endodontics', 'Oral Surgery', 'Pediatric Dentistry'];
+  const specialties = [
+    "all",
+    "General Dentistry",
+    "Orthodontics",
+    "Periodontics",
+    "Endodontics",
+    "Oral Surgery",
+    "Pediatric Dentistry",
+  ];
 
   const filteredAndSortedProviders = providers
-    .filter(provider => filterSpecialty === 'all' || provider.specialty === filterSpecialty)
+    .filter(
+      (provider) =>
+        filterSpecialty === "all" || provider.specialty === filterSpecialty,
+    )
     .sort((a, b) => {
       switch (sortBy) {
-        case 'rating':
+        case "rating":
           return (b.rating || 0) - (a.rating || 0);
-        case 'experience':
+        case "experience":
           return b.yearsOfExperience - a.yearsOfExperience;
-        case 'name':
+        case "name":
           return a.name.localeCompare(b.name);
         default:
           return 0;
@@ -97,17 +119,19 @@ function SelectProviderContent() {
             Back
           </button>
 
-           <h1 className="text-4xl font-bold mb-4">Choose Your Provider</h1>
-           <p className="text-xl text-muted-foreground mb-4">
-             Step 2 of 4: Select your preferred dentist
-           </p>
-          
+          <h1 className="text-4xl font-bold mb-4">Choose Your Provider</h1>
+          <p className="text-xl text-muted-foreground mb-4">
+            Step 2 of 4: Select your preferred dentist
+          </p>
+
           {/* Selected Service Info */}
           {service && (
             <div className="inline-block bg-muted px-6 py-3 rounded-lg mb-6">
               <p className="text-sm text-muted-foreground">Selected Service:</p>
               <p className="font-semibold">{service.name}</p>
-              <p className="text-sm text-muted-foreground">{service.duration} min • {formatCurrency(service.price)}</p>
+              <p className="text-sm text-muted-foreground">
+                {service.duration} min • {formatCurrency(service.price)}
+              </p>
             </div>
           )}
 
@@ -129,8 +153,10 @@ function SelectProviderContent() {
               className="px-4 py-2 border rounded-lg bg-background"
             >
               <option value="all">All Specialties</option>
-              {specialties.slice(1).map(spec => (
-                <option key={spec} value={spec}>{spec}</option>
+              {specialties.slice(1).map((spec) => (
+                <option key={spec} value={spec}>
+                  {spec}
+                </option>
               ))}
             </select>
           </div>
@@ -157,10 +183,11 @@ function SelectProviderContent() {
               No providers available
             </h3>
             <p className="text-muted-foreground mb-6">
-              Please try selecting a different service or contact us for assistance
+              Please try selecting a different service or contact us for
+              assistance
             </p>
             <button
-              onClick={() => router.push('/contact')}
+              onClick={() => router.push("/contact")}
               className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90"
             >
               Contact Us
@@ -175,14 +202,29 @@ function SelectProviderContent() {
                 className="bg-card rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer group border"
               >
                 {/* Provider Photo */}
-                <div className="relative h-64">
-                  <Image
-                    src={provider.imageUrl || '/placeholder-provider.jpg'}
-                    alt={provider.name}
-                    fill
-                    className="object-cover"
-                  />
-                  
+                <div className="relative h-64 bg-gradient-to-br from-primary/10 to-primary/5">
+                  {provider.imageUrl ? (
+                    <Image
+                      src={provider.imageUrl}
+                      alt={provider.name}
+                      fill
+                      className="object-cover"
+                      unoptimized={provider.imageUrl?.includes("ucarecdn.com")}
+                      onError={(e) => {
+                        console.error(
+                          "Failed to load provider image:",
+                          provider.imageUrl,
+                        );
+                        // Hide the broken image
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <User className="w-24 h-24 text-primary/20" />
+                    </div>
+                  )}
+
                   {/* Badges */}
                   <div className="absolute top-4 right-4 flex flex-col gap-2">
                     {provider.rating && (
@@ -191,7 +233,9 @@ function SelectProviderContent() {
                           <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                           <span>{provider.rating.toFixed(1)}</span>
                           {provider.totalReviews && (
-                            <span className="text-muted-foreground text-xs">({provider.totalReviews})</span>
+                            <span className="text-muted-foreground text-xs">
+                              ({provider.totalReviews})
+                            </span>
                           )}
                         </div>
                       </div>
@@ -220,8 +264,10 @@ function SelectProviderContent() {
                   <h3 className="text-2xl font-bold mb-1 group-hover:text-primary transition-colors">
                     {provider.name}, {provider.title}
                   </h3>
-                  <p className="text-primary font-medium mb-3">{provider.specialty}</p>
-                  
+                  <p className="text-primary font-medium mb-3">
+                    {provider.specialty}
+                  </p>
+
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
                     {provider.bio}
                   </p>
@@ -247,25 +293,31 @@ function SelectProviderContent() {
                         <span>Languages</span>
                       </div>
                       <p className="text-xs text-muted-foreground pl-6">
-                        {provider.languages.join(', ')}
+                        {provider.languages.join(", ")}
                       </p>
                     </div>
                   )}
 
                   {/* Certifications */}
-                  {provider.certifications && provider.certifications.length > 0 && (
-                    <div className="mb-4 flex flex-wrap gap-1">
-                      {provider.certifications.slice(0, 2).map((cert, idx) => (
-                        <span key={idx} className="text-xs bg-muted px-2 py-1 rounded">
-                          {cert}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {provider.certifications &&
+                    provider.certifications.length > 0 && (
+                      <div className="mb-4 flex flex-wrap gap-1">
+                        {provider.certifications
+                          .slice(0, 2)
+                          .map((cert, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-muted px-2 py-1 rounded"
+                            >
+                              {cert}
+                            </span>
+                          ))}
+                      </div>
+                    )}
 
                   {/* Select Button */}
                   <button className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors mt-2">
-                    Book with {provider.name.split(' ')[1] || provider.name}
+                    Book with {provider.name.split(" ")[1] || provider.name}
                   </button>
                 </div>
               </div>
@@ -279,11 +331,13 @@ function SelectProviderContent() {
 
 export default function SelectProviderPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      }
+    >
       <SelectProviderContent />
     </Suspense>
   );

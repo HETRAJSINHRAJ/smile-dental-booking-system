@@ -33,7 +33,7 @@ import {
 } from "@/lib/firebase/firestore";
 import type { Service } from "@/types/firebase";
 import { toast } from "sonner";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { UploadcareImageUpload } from "@/components/ui/uploadcare-image-upload";
 import { useCurrency } from "@/lib/localization/useCurrency";
 
 export default function ServicesPage() {
@@ -208,6 +208,7 @@ export default function ServicesPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {service.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={service.imageUrl}
                           alt={service.name}
@@ -235,7 +236,9 @@ export default function ServicesPage() {
                     <span className="text-sm">{service.duration} min</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium">{formatCurrency(service.price)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(service.price)}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
@@ -272,7 +275,10 @@ export default function ServicesPage() {
 
       {/* Create/Edit Dialog */}
       <StandardizedDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <StandardizedDialogContent size="2xl" className="max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <StandardizedDialogContent
+          size="2xl"
+          className="max-h-[90vh] overflow-hidden flex flex-col p-0"
+        >
           <StandardizedDialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
             <StandardizedDialogTitle>
               {editingService ? "Edit Service" : "Add New Service"}
@@ -283,93 +289,98 @@ export default function ServicesPage() {
                 : "Add a new dental service"}
             </StandardizedDialogDescription>
           </StandardizedDialogHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
             <StandardizedDialogBody className="overflow-y-auto flex-1 px-6 py-4">
               <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label>Service Image</Label>
-                <ImageUpload
-                  value={formData.imageUrl}
-                  onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-                  folder="services"
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Service Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Teeth Cleaning, Root Canal"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Brief description of the service..."
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  rows={3}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (minutes) *</Label>
+                  <Label>Service Image</Label>
+                  <UploadcareImageUpload
+                    value={formData.imageUrl}
+                    onChange={(url) =>
+                      setFormData({ ...formData, imageUrl: url })
+                    }
+                    folder="services"
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="name">Service Name *</Label>
                   <Input
-                    id="duration"
-                    type="number"
-                    min="15"
-                    step="15"
-                    value={formData.duration}
+                    id="name"
+                    placeholder="e.g., Teeth Cleaning, Root Canal"
+                    value={formData.name}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        duration: parseInt(e.target.value),
-                      })
+                      setFormData({ ...formData, name: e.target.value })
                     }
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Brief description of the service..."
+                    value={formData.description}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        price: parseFloat(e.target.value),
-                      })
+                      setFormData({ ...formData, description: e.target.value })
                     }
+                    rows={3}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    placeholder="e.g., General, Cosmetic"
-                    value={formData.category}
-                    onChange={(e) =>
-                      setFormData({ ...formData, category: e.target.value })
-                    }
-                  />
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="duration">Duration (minutes) *</Label>
+                    <Input
+                      id="duration"
+                      type="number"
+                      min="15"
+                      step="15"
+                      value={formData.duration}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          duration: parseInt(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (₹) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          price: parseFloat(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      placeholder="e.g., General, Cosmetic"
+                      value={formData.category}
+                      onChange={(e) =>
+                        setFormData({ ...formData, category: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
               </div>
             </StandardizedDialogBody>
             <StandardizedDialogFooter className="px-6 pb-6">
@@ -385,8 +396,8 @@ export default function ServicesPage() {
                 {submitting
                   ? "Saving..."
                   : editingService
-                  ? "Update"
-                  : "Create"}
+                    ? "Update"
+                    : "Create"}
               </Button>
             </StandardizedDialogFooter>
           </form>
@@ -394,7 +405,10 @@ export default function ServicesPage() {
       </StandardizedDialog>
 
       {/* Delete Confirmation Dialog */}
-      <StandardizedDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <StandardizedDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
         <StandardizedDialogContent size="md">
           <StandardizedDialogHeader>
             <StandardizedDialogTitle>Delete Service</StandardizedDialogTitle>

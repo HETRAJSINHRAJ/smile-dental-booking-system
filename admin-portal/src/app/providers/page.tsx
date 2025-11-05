@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/standardized-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {  Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, User, X, Edit, Calendar, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, User, X, Edit } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -46,17 +46,21 @@ import {
 import type { Provider, Service, ProviderSchedule } from "@/types/firebase";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { UploadcareImageUpload } from "@/components/ui/uploadcare-image-upload";
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [providerSchedules, setProviderSchedules] = useState<ProviderSchedule[]>([]);
+  const [providerSchedules, setProviderSchedules] = useState<
+    ProviderSchedule[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
-  const [deletingProvider, setDeletingProvider] = useState<Provider | null>(null);
+  const [deletingProvider, setDeletingProvider] = useState<Provider | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -83,8 +87,11 @@ export default function ProvidersPage() {
   const [newLanguage, setNewLanguage] = useState("");
 
   // Provider Schedule states
-  const [scheduleFormData, setScheduleFormData] = useState<Partial<ProviderSchedule>>({});
-  const [editingSchedule, setEditingSchedule] = useState<ProviderSchedule | null>(null);
+  const [scheduleFormData, setScheduleFormData] = useState<
+    Partial<ProviderSchedule>
+  >({});
+  const [editingSchedule, setEditingSchedule] =
+    useState<ProviderSchedule | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -100,10 +107,10 @@ export default function ProvidersPage() {
       ]);
       setProviders(providersData);
       setServices(servicesData);
-      
+
       // Load schedules for all providers
       const allSchedules = await Promise.all(
-        providersData.map(provider => getProviderSchedule(provider.id))
+        providersData.map((provider) => getProviderSchedule(provider.id)),
       );
       setProviderSchedules(allSchedules.flat());
     } catch (error) {
@@ -203,68 +210,71 @@ export default function ProvidersPage() {
   }
 
   function toggleService(serviceId: string) {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       serviceIds: prev.serviceIds.includes(serviceId)
-        ? prev.serviceIds.filter(id => id !== serviceId)
-        : [...prev.serviceIds, serviceId]
+        ? prev.serviceIds.filter((id) => id !== serviceId)
+        : [...prev.serviceIds, serviceId],
     }));
   }
 
   // Array management functions
   const addEducation = () => {
     if (newEducation.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        education: [...prev.education, newEducation.trim()]
+        education: [...prev.education, newEducation.trim()],
       }));
       setNewEducation("");
     }
   };
 
   const removeEducation = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      education: prev.education.filter((_, i) => i !== index)
+      education: prev.education.filter((_, i) => i !== index),
     }));
   };
 
   const addCertification = () => {
     if (newCertification.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        specializations: [...prev.specializations, newCertification.trim()]
+        specializations: [...prev.specializations, newCertification.trim()],
       }));
       setNewCertification("");
     }
   };
 
   const removeCertification = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      specializations: prev.specializations.filter((_, i) => i !== index)
+      specializations: prev.specializations.filter((_, i) => i !== index),
     }));
   };
 
   const addLanguage = () => {
     if (newLanguage.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        languages: [...prev.languages, newLanguage.trim()]
+        languages: [...prev.languages, newLanguage.trim()],
       }));
       setNewLanguage("");
     }
   };
 
   const removeLanguage = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      languages: prev.languages.filter((_, i) => i !== index)
+      languages: prev.languages.filter((_, i) => i !== index),
     }));
   };
 
   // Provider Schedule functions
-  function openScheduleDialog(providerId?: string, schedule?: ProviderSchedule) {
+  function openScheduleDialog(
+    providerId?: string,
+    schedule?: ProviderSchedule,
+  ) {
     setEditingSchedule(schedule || null);
     if (schedule) {
       // Editing existing schedule
@@ -272,13 +282,13 @@ export default function ProvidersPage() {
     } else {
       // Creating new schedule
       setScheduleFormData({
-        id: '',
-        providerId: providerId || '',
+        id: "",
+        providerId: providerId || "",
         dayOfWeek: 1, // Monday
-        startTime: '09:00',
-        endTime: '17:00',
-        breakStartTime: '12:00',
-        breakEndTime: '13:00',
+        startTime: "09:00",
+        endTime: "17:00",
+        breakStartTime: "12:00",
+        breakEndTime: "13:00",
         isAvailable: true,
       });
     }
@@ -287,60 +297,77 @@ export default function ProvidersPage() {
 
   async function handleScheduleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     // Validate schedule data
     const scheduleData = scheduleFormData;
-    
+
     // Check if day of week is selected
-    if (scheduleData.dayOfWeek === undefined || scheduleData.dayOfWeek === null) {
+    if (
+      scheduleData.dayOfWeek === undefined ||
+      scheduleData.dayOfWeek === null
+    ) {
       toast.error("Please select a day of the week");
       return;
     }
-    
+
     // Validate time slots
     if (!scheduleData.startTime || !scheduleData.endTime) {
       toast.error("Please select both start and end times");
       return;
     }
-    
+
     // Check if start time is before end time
     if (scheduleData.startTime >= scheduleData.endTime) {
       toast.error("Start time must be before end time");
       return;
     }
-    
+
     // Validate break times if provided
     if (scheduleData.breakStartTime && scheduleData.breakEndTime) {
       if (scheduleData.breakStartTime >= scheduleData.breakEndTime) {
         toast.error("Break start time must be before break end time");
         return;
       }
-      
+
       // Check if break is within working hours
-      if (scheduleData.breakStartTime < scheduleData.startTime || scheduleData.breakEndTime > scheduleData.endTime) {
+      if (
+        scheduleData.breakStartTime < scheduleData.startTime ||
+        scheduleData.breakEndTime > scheduleData.endTime
+      ) {
         toast.error("Break time must be within working hours");
         return;
       }
     }
-    
+
     // Check for conflicting schedules (only for new schedules or when editing day/time)
-    const existingSchedules = getProviderSchedules(scheduleData.providerId || '');
-    const hasConflict = existingSchedules.some(schedule => {
+    const existingSchedules = getProviderSchedules(
+      scheduleData.providerId || "",
+    );
+    const hasConflict = existingSchedules.some((schedule) => {
       if (editingSchedule && schedule.id === editingSchedule.id) return false;
-      
-      return schedule.dayOfWeek === scheduleData.dayOfWeek && 
-             schedule.isAvailable && scheduleData.isAvailable &&
-             scheduleData.startTime && scheduleData.endTime &&
-             ((scheduleData.startTime >= schedule.startTime && scheduleData.startTime < schedule.endTime) ||
-              (scheduleData.endTime > schedule.startTime && scheduleData.endTime <= schedule.endTime) ||
-              (scheduleData.startTime <= schedule.startTime && scheduleData.endTime >= schedule.endTime));
+
+      return (
+        schedule.dayOfWeek === scheduleData.dayOfWeek &&
+        schedule.isAvailable &&
+        scheduleData.isAvailable &&
+        scheduleData.startTime &&
+        scheduleData.endTime &&
+        ((scheduleData.startTime >= schedule.startTime &&
+          scheduleData.startTime < schedule.endTime) ||
+          (scheduleData.endTime > schedule.startTime &&
+            scheduleData.endTime <= schedule.endTime) ||
+          (scheduleData.startTime <= schedule.startTime &&
+            scheduleData.endTime >= schedule.endTime))
+      );
     });
-    
+
     if (hasConflict) {
-      toast.error("This schedule conflicts with an existing schedule for the same day");
+      toast.error(
+        "This schedule conflicts with an existing schedule for the same day",
+      );
       return;
     }
-    
+
     setSubmitting(true);
 
     try {
@@ -349,8 +376,8 @@ export default function ProvidersPage() {
         toast.success("Schedule updated successfully");
       } else {
         // Ensure all required fields are present for new schedule
-        const newScheduleData: Omit<ProviderSchedule, 'id'> = {
-          providerId: scheduleData.providerId || '',
+        const newScheduleData: Omit<ProviderSchedule, "id"> = {
+          providerId: scheduleData.providerId || "",
           dayOfWeek: scheduleData.dayOfWeek!,
           startTime: scheduleData.startTime!,
           endTime: scheduleData.endTime!,
@@ -361,7 +388,7 @@ export default function ProvidersPage() {
         await createProviderSchedule(newScheduleData);
         toast.success("Schedule created successfully");
       }
-      
+
       setScheduleDialogOpen(false);
       loadData(); // Reload all data including schedules
     } catch (error) {
@@ -388,27 +415,40 @@ export default function ProvidersPage() {
     }
   }
 
-  const updateScheduleFormData = (field: keyof ProviderSchedule, value: any) => {
-    setScheduleFormData(prev => ({
+  const updateScheduleFormData = (
+    field: keyof ProviderSchedule,
+    value: string | boolean | number,
+  ) => {
+    setScheduleFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const getProviderSchedules = (providerId: string) => {
-    return providerSchedules.filter(schedule => schedule.providerId === providerId);
+    return providerSchedules.filter(
+      (schedule) => schedule.providerId === providerId,
+    );
   };
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':');
+    const [hours, minutes] = time.split(":");
     const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
   const getDayName = (dayOfWeek: number) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
     return days[dayOfWeek];
   };
 
@@ -483,6 +523,7 @@ export default function ProvidersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {provider.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={provider.imageUrl}
                           alt={provider.name}
@@ -496,7 +537,9 @@ export default function ProvidersPage() {
                       <div>
                         <p className="font-medium">{provider.name}</p>
                         {provider.acceptingNewPatients && (
-                          <span className="text-xs text-green-600">Accepting patients</span>
+                          <span className="text-xs text-green-600">
+                            Accepting patients
+                          </span>
                         )}
                       </div>
                     </div>
@@ -508,14 +551,17 @@ export default function ProvidersPage() {
                   <TableCell>
                     {provider.rating ? (
                       <span className="text-sm">
-                        ⭐ {provider.rating.toFixed(1)} ({provider.totalReviews || 0})
+                        ⭐ {provider.rating.toFixed(1)} (
+                        {provider.totalReviews || 0})
                       </span>
                     ) : (
                       <span className="text-muted-foreground">N/A</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{provider.yearsOfExperience} years</span>
+                    <span className="text-sm">
+                      {provider.yearsOfExperience} years
+                    </span>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
@@ -557,7 +603,10 @@ export default function ProvidersPage() {
 
       {/* Create/Edit Dialog */}
       <StandardizedDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <StandardizedDialogContent size="3xl" className="max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <StandardizedDialogContent
+          size="3xl"
+          className="max-h-[90vh] overflow-hidden flex flex-col p-0"
+        >
           <StandardizedDialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
             <StandardizedDialogTitle>
               {editingProvider ? "Edit Provider" : "Add New Provider"}
@@ -568,316 +617,385 @@ export default function ProvidersPage() {
                 : "Add a new dental care provider"}
             </StandardizedDialogDescription>
           </StandardizedDialogHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
             <StandardizedDialogBody className="overflow-y-auto flex-1 px-6 py-4">
               <div className="grid gap-4">
-              {/* Provider Image */}
-              <div className="space-y-2">
-                <Label>Provider Photo</Label>
-                <ImageUpload
-                  value={formData.imageUrl}
-                  onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-                  folder="providers"
-                  disabled={submitting}
-                />
-              </div>
+                {/* Provider Image */}
+                <div className="space-y-2">
+                  <Label>Provider Photo</Label>
+                  <UploadcareImageUpload
+                    value={formData.imageUrl}
+                    onChange={(url) =>
+                      setFormData({ ...formData, imageUrl: url })
+                    }
+                    folder="providers"
+                    disabled={submitting}
+                  />
+                </div>
 
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                  />
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title *</Label>
+                    <Input
+                      id="title"
+                      placeholder="e.g., DDS, DMD"
+                      value={formData.title}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="e.g., DDS, DMD"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="specialty">Specialty</Label>
-                  <Input
-                    id="specialty"
-                    placeholder="e.g., Orthodontics"
-                    value={formData.specialty}
-                    onChange={(e) =>
-                      setFormData({ ...formData, specialty: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                  <Input
-                    id="yearsOfExperience"
-                    type="number"
-                    min="0"
-                    value={formData.yearsOfExperience}
-                    onChange={(e) =>
-                      setFormData({ ...formData, yearsOfExperience: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="Brief description about the provider..."
-                  value={formData.bio}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bio: e.target.value })
-                  }
-                  rows={3}
-                />
-              </div>
-
-              {/* Rating & Reviews */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="rating">Rating (0-5)</Label>
-                  <Input
-                    id="rating"
-                    type="number"
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    value={formData.rating}
-                    onChange={(e) =>
-                      setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="totalReviews">Total Reviews</Label>
-                  <Input
-                    id="totalReviews"
-                    type="number"
-                    min="0"
-                    value={formData.totalReviews}
-                    onChange={(e) =>
-                      setFormData({ ...formData, totalReviews: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2 flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={formData.acceptingNewPatients}
-                      onCheckedChange={(checked) =>
-                        setFormData({ ...formData, acceptingNewPatients: checked === true })
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="specialty">Specialty</Label>
+                    <Input
+                      id="specialty"
+                      placeholder="e.g., Orthodontics"
+                      value={formData.specialty}
+                      onChange={(e) =>
+                        setFormData({ ...formData, specialty: e.target.value })
                       }
                     />
-                    <span className="text-sm">Accepting New Patients</span>
-                  </label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="yearsOfExperience">
+                      Years of Experience
+                    </Label>
+                    <Input
+                      id="yearsOfExperience"
+                      type="number"
+                      min="0"
+                      value={formData.yearsOfExperience}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          yearsOfExperience: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Education */}
-              <div className="space-y-2">
-                <Label>Education</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g., Harvard School of Dental Medicine"
-                    value={newEducation}
-                    onChange={(e) => setNewEducation(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addEducation())}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Brief description about the provider..."
+                    value={formData.bio}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bio: e.target.value })
+                    }
+                    rows={3}
                   />
-                  <Button type="button" onClick={addEducation} size="sm">
-                    Add
-                  </Button>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.education.map((edu, idx) => (
-                    <div key={idx} className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm">
-                      <span>{edu}</span>
-                      <button type="button" onClick={() => removeEducation(idx)}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Specializations */}
-              <div className="space-y-2">
-                <Label>Specializations</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g., Board Certified Orthodontist"
-                    value={newCertification}
-                    onChange={(e) => setNewCertification(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCertification())}
-                  />
-                  <Button type="button" onClick={addCertification} size="sm">
-                    Add
-                  </Button>
+                {/* Rating & Reviews */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="rating">Rating (0-5)</Label>
+                    <Input
+                      id="rating"
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={formData.rating}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          rating: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalReviews">Total Reviews</Label>
+                    <Input
+                      id="totalReviews"
+                      type="number"
+                      min="0"
+                      value={formData.totalReviews}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          totalReviews: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2 flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.acceptingNewPatients}
+                        onCheckedChange={(checked) =>
+                          setFormData({
+                            ...formData,
+                            acceptingNewPatients: checked === true,
+                          })
+                        }
+                      />
+                      <span className="text-sm">Accepting New Patients</span>
+                    </label>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.specializations.map((spec, idx) => (
-                    <div key={idx} className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm">
-                      <span>{spec}</span>
-                      <button type="button" onClick={() => removeCertification(idx)}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Languages */}
-              <div className="space-y-2">
-                <Label>Languages</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g., English, Spanish"
-                    value={newLanguage}
-                    onChange={(e) => setNewLanguage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLanguage())}
-                  />
-                  <Button type="button" onClick={addLanguage} size="sm">
-                    Add
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.languages.map((lang, idx) => (
-                    <div key={idx} className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm">
-                      <span>{lang}</span>
-                      <button type="button" onClick={() => removeLanguage(idx)}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Provider Schedule */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Provider Schedule</Label>
-                  <Button
-                    type="button"
-                    onClick={() => openScheduleDialog(editingProvider?.id)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Schedule
-                  </Button>
-                </div>
-                
-                {getProviderSchedules(editingProvider?.id || '').length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                    {getProviderSchedules(editingProvider?.id || '').map((schedule) => (
-                      <div key={schedule.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{getDayName(schedule.dayOfWeek)}</span>
-                            <span className="text-xs text-gray-500">
-                              {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
-                            </span>
-                          </div>
-                          {schedule.breakStartTime && schedule.breakEndTime && (
-                            <span className="text-xs text-gray-400">
-                              Break: {formatTime(schedule.breakStartTime)} - {formatTime(schedule.breakEndTime)}
-                            </span>
-                          )}
-                          {!schedule.isAvailable && (
-                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Unavailable</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            onClick={() => openScheduleDialog(editingProvider?.id, schedule)}
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2"
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => handleScheduleDelete(schedule.id)}
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
+                {/* Education */}
+                <div className="space-y-2">
+                  <Label>Education</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Harvard School of Dental Medicine"
+                      value={newEducation}
+                      onChange={(e) => setNewEducation(e.target.value)}
+                      onKeyPress={(e) =>
+                        e.key === "Enter" &&
+                        (e.preventDefault(), addEducation())
+                      }
+                    />
+                    <Button type="button" onClick={addEducation} size="sm">
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.education.map((edu, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm"
+                      >
+                        <span>{edu}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeEducation(idx)}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-4 border rounded-lg">
-                    No schedules added yet. Click "Add Schedule" to create one.
-                  </p>
-                )}
-              </div>
-
-              {/* Services */}
-              <div className="space-y-2">
-                <Label>Services Offered</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                  {services.map((service) => (
-                    <div key={service.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`service-${service.id}`}
-                        checked={formData.serviceIds.includes(service.id)}
-                        onCheckedChange={() => toggleService(service.id)}
-                      />
-                      <label
-                        htmlFor={`service-${service.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {service.name}
-                      </label>
-                    </div>
-                  ))}
                 </div>
-              </div>
+
+                {/* Specializations */}
+                <div className="space-y-2">
+                  <Label>Specializations</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Board Certified Orthodontist"
+                      value={newCertification}
+                      onChange={(e) => setNewCertification(e.target.value)}
+                      onKeyPress={(e) =>
+                        e.key === "Enter" &&
+                        (e.preventDefault(), addCertification())
+                      }
+                    />
+                    <Button type="button" onClick={addCertification} size="sm">
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.specializations.map((spec, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm"
+                      >
+                        <span>{spec}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeCertification(idx)}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Languages */}
+                <div className="space-y-2">
+                  <Label>Languages</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., English, Spanish"
+                      value={newLanguage}
+                      onChange={(e) => setNewLanguage(e.target.value)}
+                      onKeyPress={(e) =>
+                        e.key === "Enter" && (e.preventDefault(), addLanguage())
+                      }
+                    />
+                    <Button type="button" onClick={addLanguage} size="sm">
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.languages.map((lang, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm"
+                      >
+                        <span>{lang}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeLanguage(idx)}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Provider Schedule */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Provider Schedule</Label>
+                    <Button
+                      type="button"
+                      onClick={() => openScheduleDialog(editingProvider?.id)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Schedule
+                    </Button>
+                  </div>
+
+                  {getProviderSchedules(editingProvider?.id || "").length >
+                  0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                      {getProviderSchedules(editingProvider?.id || "").map(
+                        (schedule) => (
+                          <div
+                            key={schedule.id}
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">
+                                  {getDayName(schedule.dayOfWeek)}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {formatTime(schedule.startTime)} -{" "}
+                                  {formatTime(schedule.endTime)}
+                                </span>
+                              </div>
+                              {schedule.breakStartTime &&
+                                schedule.breakEndTime && (
+                                  <span className="text-xs text-gray-400">
+                                    Break: {formatTime(schedule.breakStartTime)}{" "}
+                                    - {formatTime(schedule.breakEndTime)}
+                                  </span>
+                                )}
+                              {!schedule.isAvailable && (
+                                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                                  Unavailable
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                onClick={() =>
+                                  openScheduleDialog(
+                                    editingProvider?.id,
+                                    schedule,
+                                  )
+                                }
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={() =>
+                                  handleScheduleDelete(schedule.id)
+                                }
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4 border rounded-lg">
+                      No schedules added yet. Click &quot;Add Schedule&quot; to
+                      create one.
+                    </p>
+                  )}
+                </div>
+
+                {/* Services */}
+                <div className="space-y-2">
+                  <Label>Services Offered</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                    {services.map((service) => (
+                      <div
+                        key={service.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`service-${service.id}`}
+                          checked={formData.serviceIds.includes(service.id)}
+                          onCheckedChange={() => toggleService(service.id)}
+                        />
+                        <label
+                          htmlFor={`service-${service.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {service.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </StandardizedDialogBody>
             <StandardizedDialogFooter className="px-6 pb-6">
@@ -890,7 +1008,11 @@ export default function ProvidersPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Saving..." : editingProvider ? "Update" : "Create"}
+                {submitting
+                  ? "Saving..."
+                  : editingProvider
+                    ? "Update"
+                    : "Create"}
               </Button>
             </StandardizedDialogFooter>
           </form>
@@ -898,13 +1020,16 @@ export default function ProvidersPage() {
       </StandardizedDialog>
 
       {/* Delete Confirmation Dialog */}
-      <StandardizedDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <StandardizedDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
         <StandardizedDialogContent size="md">
           <StandardizedDialogHeader>
             <StandardizedDialogTitle>Delete Provider</StandardizedDialogTitle>
             <StandardizedDialogDescription>
-              Are you sure you want to delete {deletingProvider?.name}? This action
-              cannot be undone.
+              Are you sure you want to delete {deletingProvider?.name}? This
+              action cannot be undone.
             </StandardizedDialogDescription>
           </StandardizedDialogHeader>
           <StandardizedDialogFooter>
@@ -927,7 +1052,10 @@ export default function ProvidersPage() {
       </StandardizedDialog>
 
       {/* Provider Schedule Dialog */}
-      <StandardizedDialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+      <StandardizedDialog
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+      >
         <StandardizedDialogContent size="lg">
           <StandardizedDialogHeader>
             <StandardizedDialogTitle>
@@ -946,8 +1074,10 @@ export default function ProvidersPage() {
                 <div className="space-y-2">
                   <Label htmlFor="dayOfWeek">Day of Week *</Label>
                   <Select
-                    value={scheduleFormData?.dayOfWeek?.toString() || ''}
-                    onValueChange={(value) => updateScheduleFormData('dayOfWeek', parseInt(value))}
+                    value={scheduleFormData?.dayOfWeek?.toString() || ""}
+                    onValueChange={(value) =>
+                      updateScheduleFormData("dayOfWeek", parseInt(value))
+                    }
                   >
                     <SelectTrigger id="dayOfWeek">
                       <SelectValue placeholder="Select a day" />
@@ -971,8 +1101,10 @@ export default function ProvidersPage() {
                     <Input
                       id="startTime"
                       type="time"
-                      value={scheduleFormData?.startTime || ''}
-                  onChange={(e) => updateScheduleFormData('startTime', e.target.value)}
+                      value={scheduleFormData?.startTime || ""}
+                      onChange={(e) =>
+                        updateScheduleFormData("startTime", e.target.value)
+                      }
                       required
                       min="00:00"
                       max="23:59"
@@ -983,17 +1115,23 @@ export default function ProvidersPage() {
                     <Input
                       id="endTime"
                       type="time"
-                      value={scheduleFormData?.endTime || ''}
-                  onChange={(e) => updateScheduleFormData('endTime', e.target.value)}
+                      value={scheduleFormData?.endTime || ""}
+                      onChange={(e) =>
+                        updateScheduleFormData("endTime", e.target.value)
+                      }
                       required
                       min="00:00"
                       max="23:59"
                     />
                   </div>
                 </div>
-                {scheduleFormData?.startTime && scheduleFormData?.endTime && scheduleFormData.startTime >= scheduleFormData.endTime && (
-                  <p className="text-sm text-red-600">End time must be after start time</p>
-                )}
+                {scheduleFormData?.startTime &&
+                  scheduleFormData?.endTime &&
+                  scheduleFormData.startTime >= scheduleFormData.endTime && (
+                    <p className="text-sm text-red-600">
+                      End time must be after start time
+                    </p>
+                  )}
 
                 {/* Break Time */}
                 <div className="space-y-2">
@@ -1004,10 +1142,15 @@ export default function ProvidersPage() {
                       <Input
                         id="breakStartTime"
                         type="time"
-                        value={scheduleFormData?.breakStartTime || ''}
-                  onChange={(e) => updateScheduleFormData('breakStartTime', e.target.value)}
-                  min={scheduleFormData?.startTime || '00:00'}
-                  max={scheduleFormData?.endTime || '23:59'}
+                        value={scheduleFormData?.breakStartTime || ""}
+                        onChange={(e) =>
+                          updateScheduleFormData(
+                            "breakStartTime",
+                            e.target.value,
+                          )
+                        }
+                        min={scheduleFormData?.startTime || "00:00"}
+                        max={scheduleFormData?.endTime || "23:59"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1015,23 +1158,35 @@ export default function ProvidersPage() {
                       <Input
                         id="breakEndTime"
                         type="time"
-                        value={scheduleFormData?.breakEndTime || ''}
-                  onChange={(e) => updateScheduleFormData('breakEndTime', e.target.value)}
-                  min={scheduleFormData?.startTime || '00:00'}
-                  max={scheduleFormData?.endTime || '23:59'}
+                        value={scheduleFormData?.breakEndTime || ""}
+                        onChange={(e) =>
+                          updateScheduleFormData("breakEndTime", e.target.value)
+                        }
+                        min={scheduleFormData?.startTime || "00:00"}
+                        max={scheduleFormData?.endTime || "23:59"}
                       />
                     </div>
                   </div>
-                  {scheduleFormData?.breakStartTime && scheduleFormData?.breakEndTime &&
-                  scheduleFormData.breakStartTime >= scheduleFormData.breakEndTime && (
-                    <p className="text-sm text-red-600">Break end time must be after break start time</p>
-                  )}
-                  {scheduleFormData?.breakStartTime && scheduleFormData?.breakEndTime &&
-                  scheduleFormData.startTime && scheduleFormData.endTime &&
-                  (scheduleFormData.breakStartTime < scheduleFormData.startTime ||
-                   scheduleFormData.breakEndTime > scheduleFormData.endTime) && (
-                    <p className="text-sm text-red-600">Break time must be within working hours</p>
-                  )}
+                  {scheduleFormData?.breakStartTime &&
+                    scheduleFormData?.breakEndTime &&
+                    scheduleFormData.breakStartTime >=
+                      scheduleFormData.breakEndTime && (
+                      <p className="text-sm text-red-600">
+                        Break end time must be after break start time
+                      </p>
+                    )}
+                  {scheduleFormData?.breakStartTime &&
+                    scheduleFormData?.breakEndTime &&
+                    scheduleFormData.startTime &&
+                    scheduleFormData.endTime &&
+                    (scheduleFormData.breakStartTime <
+                      scheduleFormData.startTime ||
+                      scheduleFormData.breakEndTime >
+                        scheduleFormData.endTime) && (
+                      <p className="text-sm text-red-600">
+                        Break time must be within working hours
+                      </p>
+                    )}
                 </div>
 
                 {/* Availability */}
@@ -1039,7 +1194,9 @@ export default function ProvidersPage() {
                   <Checkbox
                     id="isAvailable"
                     checked={scheduleFormData?.isAvailable || false}
-                    onCheckedChange={(checked) => updateScheduleFormData('isAvailable', checked === true)}
+                    onCheckedChange={(checked) =>
+                      updateScheduleFormData("isAvailable", checked === true)
+                    }
                   />
                   <Label htmlFor="isAvailable" className="cursor-pointer">
                     Available on this day
@@ -1057,7 +1214,11 @@ export default function ProvidersPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Saving..." : editingSchedule ? "Update" : "Create"}
+                {submitting
+                  ? "Saving..."
+                  : editingSchedule
+                    ? "Update"
+                    : "Create"}
               </Button>
             </StandardizedDialogFooter>
           </form>

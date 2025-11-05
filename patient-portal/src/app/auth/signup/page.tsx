@@ -111,8 +111,8 @@ export default function SignupPage() {
                 value={phone}
                 onChange={setPhone}
                 showValidation={true}
-                showTelecomCircle={true}
-                showSMSIndicator={true}
+                showTelecomCircle={false}
+                showSMSIndicator={false}
                 placeholder="+91 12345 67890"
                 className="bg-background"
               />
