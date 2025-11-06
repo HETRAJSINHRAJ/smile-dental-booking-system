@@ -40,10 +40,24 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     
     const displayError = externalError || (showValidation && validationError);
     
+    const formatPhoneNumber = (value: string) => {
+      // Remove all non-numeric characters
+      const numbers = value.replace(/\D/g, '');
+      
+      // Format as 12345 12345 (5 digits, space, 5 digits)
+      if (numbers.length <= 5) {
+        return numbers;
+      } else if (numbers.length <= 10) {
+        return `${numbers.slice(0, 5)} ${numbers.slice(5)}`;
+      } else {
+        return `${numbers.slice(0, 5)} ${numbers.slice(5, 10)}`;
+      }
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setPhoneNumber(newValue);
-      onChange(newValue);
+      const formatted = formatPhoneNumber(e.target.value);
+      setPhoneNumber(formatted);
+      onChange(formatted);
     };
     
     return (
@@ -55,6 +69,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
             value={phoneNumber}
             onChange={handleChange}
             placeholder={placeholder}
+            maxLength={11}
             className={cn(
               "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               showValidation && phoneNumber && !isValid && "border-red-500 focus-visible:ring-red-500",

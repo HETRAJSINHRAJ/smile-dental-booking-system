@@ -85,6 +85,42 @@ export default function ProvidersPage() {
   const [newEducation, setNewEducation] = useState("");
   const [newCertification, setNewCertification] = useState("");
   const [newLanguage, setNewLanguage] = useState("");
+  const [providerCountryCode, setProviderCountryCode] = useState('+91');
+  const [providerPhoneNumber, setProviderPhoneNumber] = useState('');
+
+  // Country codes list
+  const countryCodes = [
+    { code: '+1', country: 'US/CA', flag: '🇺🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+49', country: 'Germany', flag: '🇩🇪' },
+    { code: '+33', country: 'France', flag: '🇫🇷' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+971', country: 'UAE', flag: '🇦🇪' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+  ];
+
+  // Phone formatting helper
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-numeric characters
+    const numbers = value.replace(/\D/g, '');
+    
+    // Format as 12345 12345 (5 digits, space, 5 digits)
+    if (numbers.length <= 5) {
+      return numbers;
+    } else if (numbers.length <= 10) {
+      return `${numbers.slice(0, 5)} ${numbers.slice(5)}`;
+    } else {
+      return `${numbers.slice(0, 5)} ${numbers.slice(5, 10)}`;
+    }
+  };
+
+  const handleProviderPhoneChange = (value: string) => {
+    const formatted = formatPhoneNumber(value);
+    setProviderPhoneNumber(formatted);
+  };
 
   // Provider Schedule states
   const [scheduleFormData, setScheduleFormData] = useState<
@@ -140,6 +176,8 @@ export default function ProvidersPage() {
       rating: 0,
       totalReviews: 0,
     });
+    setProviderCountryCode('+91');
+    setProviderPhoneNumber('');
     setDialogOpen(true);
   }
 
@@ -162,6 +200,22 @@ export default function ProvidersPage() {
       rating: provider.rating || 0,
       totalReviews: provider.totalReviews || 0,
     });
+    
+    // Parse phone number to extract country code
+    if (provider.phone) {
+      const phoneMatch = provider.phone.match(/^(\+\d+)\s*(.+)$/);
+      if (phoneMatch) {
+        setProviderCountryCode(phoneMatch[1]);
+        setProviderPhoneNumber(phoneMatch[2]);
+      } else {
+        setProviderCountryCode('+91');
+        setProviderPhoneNumber(provider.phone);
+      }
+    } else {
+      setProviderCountryCode('+91');
+      setProviderPhoneNumber('');
+    }
+    
     setDialogOpen(true);
   }
 
@@ -175,11 +229,17 @@ export default function ProvidersPage() {
     setSubmitting(true);
 
     try {
+      // Combine country code with phone number
+      const providerData = {
+        ...formData,
+        phone: providerPhoneNumber ? `${providerCountryCode} ${providerPhoneNumber}` : ''
+      };
+      
       if (editingProvider) {
-        await updateProvider(editingProvider.id, formData);
+        await updateProvider(editingProvider.id, providerData);
         toast.success("Provider updated successfully");
       } else {
-        await createProvider(formData);
+        await createProvider(providerData);
         toast.success("Provider created successfully");
       }
       setDialogOpen(false);
@@ -564,9 +624,25 @@ export default function ProvidersPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {provider.serviceIds?.length || 0} services
-                    </span>
+                    {provider.serviceIds && provider.serviceIds.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {provider.serviceIds.slice(0, 2).map((serviceId) => {
+                          const service = services.find(s => s.id === serviceId);
+                          return service ? (
+                            <span key={serviceId} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                              {service.name}
+                            </span>
+                          ) : null;
+                        })}
+                        {provider.serviceIds.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{provider.serviceIds.length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No services</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
@@ -708,14 +784,32 @@ export default function ProvidersPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                    />
+                    <div className="flex gap-2">
+                      <Select value={providerCountryCode} onValueChange={setProviderCountryCode}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countryCodes.map((item) => (
+                            <SelectItem key={item.code} value={item.code}>
+                              <span className="flex items-center gap-2">
+                                <span>{item.flag}</span>
+                                <span>{item.code}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        className="flex-1"
+                        value={providerPhoneNumber}
+                        onChange={(e) => handleProviderPhoneChange(e.target.value)}
+                        placeholder="98765 43210"
+                        maxLength={11}
+                      />
+                    </div>
                   </div>
                 </div>
 

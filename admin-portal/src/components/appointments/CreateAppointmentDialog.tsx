@@ -346,7 +346,7 @@ export default function CreateAppointmentDialog({
 
   return (
     <StandardizedDialog open={open} onOpenChange={onOpenChange}>
-      <StandardizedDialogContent size="3xl" className="max-h-[95vh] flex flex-col p-0">
+      <StandardizedDialogContent size="3xl" className="max-h-[95vh] flex flex-col p-0 overflow-hidden">
         <StandardizedDialogHeader className="px-6 py-4 border-b border-gray-200 shrink-0">
           <StandardizedDialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />

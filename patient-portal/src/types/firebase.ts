@@ -112,6 +112,7 @@ export interface UserProfile {
   email: string;
   phone: string;
   dateOfBirth?: Timestamp;
+  gender?: string;
   address?: {
     street: string;
     city: string;

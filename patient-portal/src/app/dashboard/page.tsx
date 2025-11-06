@@ -8,6 +8,13 @@ import {
   Mail, Phone, MapPin, Heart, Shield, AlertCircle,
   Loader2, CheckCircle2, Clock, XCircle
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +37,49 @@ export default function DashboardPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
+  const [countryCode, setCountryCode] = useState('+91');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [emergencyCountryCode, setEmergencyCountryCode] = useState('+91');
+  const [emergencyPhoneNumber, setEmergencyPhoneNumber] = useState('');
+
+  // Country codes list
+  const countryCodes = [
+    { code: '+1', country: 'US/CA', flag: '🇺🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+49', country: 'Germany', flag: '🇩🇪' },
+    { code: '+33', country: 'France', flag: '🇫🇷' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+971', country: 'UAE', flag: '🇦🇪' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+  ];
+
+  // Phone formatting helper
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-numeric characters
+    const numbers = value.replace(/\D/g, '');
+    
+    // Format as 12345 12345 (5 digits, space, 5 digits)
+    if (numbers.length <= 5) {
+      return numbers;
+    } else if (numbers.length <= 10) {
+      return `${numbers.slice(0, 5)} ${numbers.slice(5)}`;
+    } else {
+      return `${numbers.slice(0, 5)} ${numbers.slice(5, 10)}`;
+    }
+  };
+
+  const handlePhoneChange = (value: string) => {
+    const formatted = formatPhoneNumber(value);
+    setPhoneNumber(formatted);
+  };
+
+  const handleEmergencyPhoneChange = (value: string) => {
+    const formatted = formatPhoneNumber(value);
+    setEmergencyPhoneNumber(formatted);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -50,6 +100,28 @@ export default function DashboardPage() {
       if (userProfile) {
         setProfile(userProfile);
         setEditedProfile(userProfile);
+        
+        // Parse phone number to extract country code
+        if (userProfile.phone) {
+          const phoneMatch = userProfile.phone.match(/^(\+\d+)\s*(.+)$/);
+          if (phoneMatch) {
+            setCountryCode(phoneMatch[1]);
+            setPhoneNumber(phoneMatch[2]);
+          } else {
+            setPhoneNumber(userProfile.phone);
+          }
+        }
+        
+        // Parse emergency contact phone
+        if (userProfile.emergencyContact?.phone) {
+          const emergencyPhoneMatch = userProfile.emergencyContact.phone.match(/^(\+\d+)\s*(.+)$/);
+          if (emergencyPhoneMatch) {
+            setEmergencyCountryCode(emergencyPhoneMatch[1]);
+            setEmergencyPhoneNumber(emergencyPhoneMatch[2]);
+          } else {
+            setEmergencyPhoneNumber(userProfile.emergencyContact.phone);
+          }
+        }
       }
 
       // Load appointments
@@ -87,8 +159,19 @@ export default function DashboardPage() {
 
     try {
       setSaving(true);
-      await updateUserProfile(user.uid, editedProfile);
-      setProfile({ ...profile, ...editedProfile } as UserProfile);
+      
+      // Combine country code with phone number
+      const updatedProfile = {
+        ...editedProfile,
+        phone: phoneNumber ? `${countryCode} ${phoneNumber}` : editedProfile.phone,
+        emergencyContact: editedProfile.emergencyContact ? {
+          ...editedProfile.emergencyContact,
+          phone: emergencyPhoneNumber ? `${emergencyCountryCode} ${emergencyPhoneNumber}` : editedProfile.emergencyContact.phone
+        } : undefined
+      };
+      
+      await updateUserProfile(user.uid, updatedProfile);
+      setProfile({ ...profile, ...updatedProfile } as UserProfile);
       setEditing(false);
       toast.success('Profile updated successfully');
     } catch (error) {
@@ -101,6 +184,28 @@ export default function DashboardPage() {
 
   const handleCancelEdit = () => {
     setEditedProfile(profile || {});
+    
+    // Reset phone numbers to original values
+    if (profile?.phone) {
+      const phoneMatch = profile.phone.match(/^(\+\d+)\s*(.+)$/);
+      if (phoneMatch) {
+        setCountryCode(phoneMatch[1]);
+        setPhoneNumber(phoneMatch[2]);
+      } else {
+        setPhoneNumber(profile.phone);
+      }
+    }
+    
+    if (profile?.emergencyContact?.phone) {
+      const emergencyPhoneMatch = profile.emergencyContact.phone.match(/^(\+\d+)\s*(.+)$/);
+      if (emergencyPhoneMatch) {
+        setEmergencyCountryCode(emergencyPhoneMatch[1]);
+        setEmergencyPhoneNumber(emergencyPhoneMatch[2]);
+      } else {
+        setEmergencyPhoneNumber(profile.emergencyContact.phone);
+      }
+    }
+    
     setEditing(false);
   };
 
@@ -246,17 +351,38 @@ export default function DashboardPage() {
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     {profile?.email || user.email}
                   </div>
+                  <p className="text-xs text-muted-foreground">Email cannot be changed as it's linked to your account</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
                   {editing ? (
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={editedProfile.phone || ''}
-                      onChange={(e) => setEditedProfile({ ...editedProfile, phone: e.target.value })}
-                    />
+                    <div className="flex gap-2">
+                      <Select value={countryCode} onValueChange={setCountryCode}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countryCodes.map((item) => (
+                            <SelectItem key={item.code} value={item.code}>
+                              <span className="flex items-center gap-2">
+                                <span>{item.flag}</span>
+                                <span>{item.code}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        className="flex-1"
+                        value={phoneNumber}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        placeholder="98765 43210"
+                        maxLength={11}
+                      />
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -286,6 +412,29 @@ export default function DashboardPage() {
                       {profile?.dateOfBirth instanceof Timestamp
                         ? profile.dateOfBirth.toDate().toLocaleDateString()
                         : 'Not provided'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  {editing ? (
+                    <Select 
+                      value={editedProfile.gender || ''} 
+                      onValueChange={(value) => setEditedProfile({ ...editedProfile, gender: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-sm">
+                      {profile?.gender ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -466,15 +615,32 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="emergencyPhone">Phone</Label>
-                    <Input
-                      id="emergencyPhone"
-                      type="tel"
-                      value={editedProfile.emergencyContact?.phone || ''}
-                      onChange={(e) => setEditedProfile({
-                        ...editedProfile,
-                        emergencyContact: { ...editedProfile.emergencyContact, phone: e.target.value } as any
-                      })}
-                    />
+                    <div className="flex gap-2">
+                      <Select value={emergencyCountryCode} onValueChange={setEmergencyCountryCode}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countryCodes.map((item) => (
+                            <SelectItem key={item.code} value={item.code}>
+                              <span className="flex items-center gap-2">
+                                <span>{item.flag}</span>
+                                <span>{item.code}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="emergencyPhone"
+                        type="tel"
+                        className="flex-1"
+                        value={emergencyPhoneNumber}
+                        onChange={(e) => handleEmergencyPhoneChange(e.target.value)}
+                        placeholder="98765 43210"
+                        maxLength={11}
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (

@@ -23,7 +23,8 @@ import {
   CalendarX,
   CalendarClock,
   FileText,
-  Heart
+  Heart,
+  UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,11 @@ const menuItems = [
         title: "All Patients",
         href: "/patients",
         icon: Users,
+      },
+      {
+        title: "Create Patient",
+        href: "/patients/create",
+        icon: UserPlus,
       },
       {
         title: "Patient Records",
@@ -158,7 +164,7 @@ export default function AdminSidebar() {
 
   // Auto-expand sections when navigating to their pages
   useEffect(() => {
-    const newExpanded = [];
+    const newExpanded: string[] = [];
     
     if (pathname?.startsWith('/appointments') && !expandedItems.includes('Appointments')) {
       newExpanded.push('Appointments');

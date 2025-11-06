@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Users,
+  User,
   Search,
   Mail,
   Phone,
@@ -17,6 +18,7 @@ import {
   Heart,
   Cake,
 } from "lucide-react";
+import QuickCreatePatientButton from "@/components/patients/QuickCreatePatientButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -213,6 +215,7 @@ export default function PatientsPage() {
           <Badge variant="outline" className="px-3 py-1">
             Total: {patients.length}
           </Badge>
+          <QuickCreatePatientButton onPatientCreated={fetchPatients} />
         </div>
       </div>
 
@@ -376,6 +379,17 @@ export default function PatientsPage() {
                             {selectedPatient.profile.dateOfBirth
                               .toDate()
                               .toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                      {selectedPatient.profile?.gender && (
+                        <div>
+                          <p className="text-muted-foreground mb-1">
+                            Gender
+                          </p>
+                          <p className="font-medium flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            {selectedPatient.profile.gender.charAt(0).toUpperCase() + selectedPatient.profile.gender.slice(1)}
                           </p>
                         </div>
                       )}

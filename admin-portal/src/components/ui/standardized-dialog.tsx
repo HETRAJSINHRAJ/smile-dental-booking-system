@@ -44,6 +44,7 @@ const StandardizedDialogContent = React.forwardRef<
     xl: "max-w-[calc(100vw-2rem)] sm:max-w-xl",
     "2xl": "max-w-[calc(100vw-2rem)] sm:max-w-2xl",
     "3xl": "max-w-[calc(100vw-2rem)] sm:max-w-6xl",
+    "4xl": "max-w-[calc(100vw-2rem)] sm:max-w-6xl",
     full: "max-w-[calc(100vw-2rem)] sm:max-w-[90vw]",
   };
 

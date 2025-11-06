@@ -76,10 +76,18 @@ function SelectProviderContent() {
     { id: "Pediatric Dentistry", name: "Pediatric" },
   ];
 
-  const filteredProviders = providers.filter(
-    (provider) =>
-      filterSpecialty === "all" || provider.specialty === filterSpecialty,
-  );
+  const filteredProviders = providers.filter((provider) => {
+    // First check if provider offers the selected service
+    const offersService = service && provider.serviceIds && provider.serviceIds.includes(service.id);
+    
+    // If no service is selected or provider doesn't offer it, exclude them
+    if (!offersService) {
+      return false;
+    }
+    
+    // Then filter by specialty
+    return filterSpecialty === "all" || provider.specialty === filterSpecialty;
+  });
 
   if (loading) {
     return (
