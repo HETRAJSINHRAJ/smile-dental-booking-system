@@ -43,8 +43,8 @@ service cloud.firestore {
       // Users can read their own profile, admins can read all profiles
       allow read: if isOwner(userId) || isAdmin();
 
-      // Users can create their own profile
-      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Users can create their own profile, admins can create any profile
+      allow create: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
 
       // Users can update their own profile (except role and uid fields)
       allow update: if isOwner(userId) &&
@@ -130,6 +130,45 @@ service cloud.firestore {
       
       // Only admins can update or delete payment logs
       allow update, delete: if isAdmin();
+    }
+    
+    // Audit logs collection (for data access tracking)
+    match /audit_logs/{logId} {
+      // Allow creation of audit logs for authenticated users
+      allow create: if isAuthenticated();
+      
+      // Only admins can read audit logs
+      allow read: if isAdmin();
+      
+      // No one can update or delete audit logs (immutable)
+      allow update, delete: if false;
+    }
+    
+    // User activity logs (for security monitoring)
+    match /user_activity_logs/{activityId} {
+      // Allow creation for authenticated users
+      allow create: if isAuthenticated();
+      
+      // Users can read their own activity logs, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // No updates or deletes (immutable logs)
+      allow update, delete: if false;
+    }
+    
+    // Encrypted medical data collection
+    match /encrypted_medical_data/{dataId} {
+      // Users can only access their own encrypted medical data
+      allow read, write: if isAuthenticated() && 
+                            resource.data.userId == request.auth.uid;
+      
+      // Admins can read all encrypted medical data
+      allow read: if isAdmin();
+      
+      // Only the owner can delete their encrypted data
+      allow delete: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
     }
   }
 }

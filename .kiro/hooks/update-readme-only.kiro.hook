@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Update README Instead of New MD Files",
+  "description": "Monitors for creation of new .md files and prompts to update existing README.md files instead of creating unnecessary markdown documentation files",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "**/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A new markdown file has been created or modified. Review if this content should instead be added to an existing README.md file in the same directory or parent directory. If a README.md already exists nearby, suggest consolidating the content there instead of maintaining separate .md files. Check if the new .md file is necessary or if it duplicates documentation that belongs in README.md."
+  }
+}

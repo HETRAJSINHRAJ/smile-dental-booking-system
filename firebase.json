@@ -4,5 +4,15 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "appDistribution": {
+    "android": {
+      "artifactType": "APK",
+      "artifactPath": "mobile-app/build/app/outputs/flutter-apk/app-production-release.apk"
+    },
+    "ios": {
+      "artifactType": "IPA",
+      "artifactPath": "mobile-app/build/ios/ipa/dental_care_app.ipa"
+    }
   }
 }
