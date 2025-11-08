@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContextWithToast';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { Card } from '../../components/Card';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -67,7 +67,7 @@ const ProfileScreen: React.FC = () => {
         <Card style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <View style={styles.avatar}>
-              <Icon name="person" size={48} color={colors.primary[500]} />
+              <Icon name="person" size={18} color={colors.primary[500]} />
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.name}>{userProfile?.fullName || 'User'}</Text>
@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 80,
-    height: 80,
+    width: 40,
+    height: 40,
     backgroundColor: colors.primary[50],
     borderRadius: borderRadius.full,
     justifyContent: 'center',

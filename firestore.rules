@@ -81,8 +81,16 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
-    // Provider schedules collection (top-level)
+    // Provider schedules collection (top-level) - Support both naming conventions
     match /provider_schedules/{scheduleId} {
+      // Anyone can read schedules (needed for booking flow)
+      allow read: if true;
+      // Only admins can create, update, or delete schedules
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Provider schedules collection (camelCase version for mobile app)
+    match /providerSchedules/{scheduleId} {
       // Anyone can read schedules (needed for booking flow)
       allow read: if true;
       // Only admins can create, update, or delete schedules

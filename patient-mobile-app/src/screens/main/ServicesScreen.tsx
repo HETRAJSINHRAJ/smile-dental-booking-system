@@ -48,11 +48,12 @@ const ServicesScreen: React.FC = () => {
       colors.secondary[500],
     ];
     const isLast = index % 4 === 3;
+    const bgColor = bgColors[index % 4];
     
     return (
-      <Card style={[styles.serviceCard, { backgroundColor: bgColors[index % 4] }]}>
+      <Card style={styles.serviceCard}>
         <TouchableOpacity
-          style={styles.serviceContent}
+          style={[styles.serviceContent, { backgroundColor: bgColor }]}
           onPress={() => navigation.navigate('SelectService')}
         >
           <View style={[styles.serviceIcon, isLast && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
@@ -161,10 +162,13 @@ const styles = StyleSheet.create({
   serviceCard: {
     marginBottom: spacing.md,
     ...shadows.medium,
+    overflow: 'hidden',
   },
   serviceContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
   },
   serviceIcon: {
     width: 64,

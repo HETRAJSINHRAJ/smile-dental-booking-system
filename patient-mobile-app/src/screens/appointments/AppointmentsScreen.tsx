@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContextWithToast';
 import { getAllDocuments } from '../../lib/firestore';
 import { Appointment } from '../../types/firebase';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';

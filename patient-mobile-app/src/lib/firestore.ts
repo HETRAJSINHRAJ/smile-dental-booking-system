@@ -138,7 +138,15 @@ export async function checkProviderAvailability(
       const appointment = doc.data();
       const [appHours, appMinutes] = appointment.startTime.split(':').map(Number);
       const appointmentStart = appHours * 60 + appMinutes;
-      const appointmentEnd = appointmentStart + (appointment.duration || 30);
+      
+      // Use endTime if available, otherwise calculate from duration
+      let appointmentEnd: number;
+      if (appointment.endTime) {
+        const [appEndHours, appEndMinutes] = appointment.endTime.split(':').map(Number);
+        appointmentEnd = appEndHours * 60 + appEndMinutes;
+      } else {
+        appointmentEnd = appointmentStart + (appointment.duration || 30);
+      }
 
       if (
         (requestedStart >= appointmentStart && requestedStart < appointmentEnd) ||
@@ -167,7 +175,7 @@ export async function getAvailableTimeSlots(
   try {
     const dayOfWeek = date.getDay();
     const scheduleSnapshot = await firestore()
-      .collection('providerSchedules')
+      .collection('provider_schedules')
       .where('providerId', '==', providerId)
       .where('dayOfWeek', '==', dayOfWeek)
       .where('isAvailable', '==', true)
@@ -190,9 +198,25 @@ export async function getAvailableTimeSlots(
       const minutes = currentMinutes % 60;
       const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 
-      const isAvailable = await checkProviderAvailability(providerId, date, timeSlot, duration);
-      if (isAvailable) {
-        slots.push(timeSlot);
+      // Skip break time if defined
+      if (schedule.breakStartTime && schedule.breakEndTime) {
+        const [breakStartHour, breakStartMinute] = schedule.breakStartTime.split(':').map(Number);
+        const [breakEndHour, breakEndMinute] = schedule.breakEndTime.split(':').map(Number);
+        const breakStart = breakStartHour * 60 + breakStartMinute;
+        const breakEnd = breakEndHour * 60 + breakEndMinute;
+        
+        // Skip slots that fall within break time
+        if (!(currentMinutes >= breakStart && currentMinutes < breakEnd)) {
+          const isAvailable = await checkProviderAvailability(providerId, date, timeSlot, duration);
+          if (isAvailable) {
+            slots.push(timeSlot);
+          }
+        }
+      } else {
+        const isAvailable = await checkProviderAvailability(providerId, date, timeSlot, duration);
+        if (isAvailable) {
+          slots.push(timeSlot);
+        }
       }
 
       currentMinutes += 30; // 30-minute intervals

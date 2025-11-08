@@ -6,12 +6,16 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAllDocuments } from '../../lib/firestore';
 import { Service } from '../../types/firebase';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
+import { Card } from '../../components/Card';
 
 type SelectServiceScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -45,124 +49,235 @@ const SelectServiceScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate('SelectProvider', { serviceId });
   };
 
-  const renderService = ({ item }: { item: Service }) => (
+  const getServiceIcon = (index: number) => {
+    const icons = ['medical', 'fitness', 'heart', 'eye', 'body', 'bandage'];
+    return icons[index % icons.length];
+  };
+
+  const getServiceColor = (index: number) => {
+    const bgColors = [
+      colors.primary[100],
+      colors.primary[50],
+      colors.accent.light,
+      colors.secondary[100],
+      colors.primary[100],
+      colors.accent.light,
+    ];
+    return bgColors[index % bgColors.length];
+  };
+
+  const renderService = ({ item, index }: { item: Service; index: number }) => (
     <TouchableOpacity
       style={styles.serviceCard}
       onPress={() => handleSelectService(item.id)}
+      activeOpacity={0.7}
     >
-      <View style={styles.serviceIcon}>
-        <Icon name="medical" size={32} color="#3B82F6" />
-      </View>
-      <View style={styles.serviceInfo}>
-        <Text style={styles.serviceName}>{item.name}</Text>
-        <Text style={styles.serviceDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <View style={styles.serviceFooter}>
-          <Text style={styles.servicePrice}>₹{item.price}</Text>
-          <Text style={styles.serviceDuration}>{item.duration} min</Text>
+      <Card style={styles.cardInner}>
+        <View style={styles.serviceContent}>
+          <View style={[styles.serviceIcon, { backgroundColor: getServiceColor(index) }]}>
+            <Icon name={getServiceIcon(index)} size={32} color={colors.secondary[500]} />
+          </View>
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceName}>{item.name}</Text>
+            <Text style={styles.serviceDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
+          </View>
         </View>
-      </View>
-      <Icon name="chevron-forward" size={24} color="#6B7280" />
+        
+        <View style={styles.serviceFooter}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.servicePrice}>₹{item.price}</Text>
+            <Text style={styles.priceLabel}>per session</Text>
+          </View>
+          <View style={styles.durationContainer}>
+            <Icon name="time-outline" size={16} color={colors.text.secondary} />
+            <Text style={styles.serviceDuration}>{item.duration} min</Text>
+          </View>
+          <View style={styles.arrowButton}>
+            <Icon name="arrow-forward" size={20} color={colors.secondary[100]} />
+          </View>
+        </View>
+      </Card>
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
-      </View>
+      <SafeAreaView style={styles.loadingContainer} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background.default} />
+        <ActivityIndicator size="large" color={colors.secondary[500]} />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background.default} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Select Service</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerRight} />
       </View>
+      
+      <View style={styles.subHeader}>
+        <Text style={styles.subHeaderText}>
+          Choose the service you need
+        </Text>
+        <Text style={styles.serviceCount}>
+          {services.length} {services.length === 1 ? 'service' : 'services'} available
+        </Text>
+      </View>
+
       <FlatList
         data={services}
         renderItem={renderService}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.default,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.background.default,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.background.default,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  listContent: {
-    padding: 16,
-  },
-  serviceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  serviceIcon: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 32,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    ...shadows.small,
+  },
+  headerTitle: {
+    ...typography.headlineMedium,
+    color: colors.text.primary,
+    fontWeight: '700',
+  },
+  headerRight: {
+    width: 44,
+  },
+  subHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xl,
+  },
+  subHeaderText: {
+    ...typography.bodyLarge,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+  },
+  serviceCount: {
+    ...typography.labelLarge,
+    color: colors.secondary[500],
+    fontWeight: '600',
+  },
+  listContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl * 2,
+  },
+  serviceCard: {
+    marginBottom: spacing.lg,
+  },
+  cardInner: {
+    padding: spacing.lg,
+  },
+  serviceContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  serviceIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: borderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.lg,
   },
   serviceInfo: {
     flex: 1,
+    paddingTop: spacing.xs,
   },
   serviceName: {
-    fontSize: 16,
+    ...typography.titleLarge,
+    color: colors.text.primary,
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: spacing.sm,
   },
   serviceDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
+    ...typography.bodyMedium,
+    color: colors.text.secondary,
+    lineHeight: 20,
   },
   serviceFooter: {
     flexDirection: 'row',
-    gap: 16,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.primary[50],
+  },
+  priceContainer: {
+    flexDirection: 'column',
+    gap: 2,
   },
   servicePrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#3B82F6',
+    ...typography.headlineSmall,
+    color: colors.secondary[500],
+    fontWeight: '700',
+  },
+  priceLabel: {
+    ...typography.labelSmall,
+    color: colors.text.secondary,
+  },
+  durationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary[50],
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
   },
   serviceDuration: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...typography.labelMedium,
+    color: colors.text.secondary,
+    fontWeight: '600',
+  },
+  arrowButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary[500],
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.small,
   },
 });
 

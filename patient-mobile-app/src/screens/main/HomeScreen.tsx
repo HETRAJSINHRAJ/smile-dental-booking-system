@@ -78,7 +78,7 @@ const HomeScreen: React.FC = () => {
           <View style={styles.greetingContainer}>
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>
-              {userProfile?.fullName.split(' ')[0] || 'Guest'}
+              {userProfile?.fullName.split(' ')[0] || 'There'}
             </Text>
           </View>
           <TouchableOpacity style={styles.notificationButton}>

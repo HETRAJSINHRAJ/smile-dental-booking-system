@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -43,7 +43,11 @@ const BookingScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background.default} />
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.iconContainer}>
             <Icon name="calendar" size={80} color={colors.primary[500]} />
@@ -78,7 +82,7 @@ const BookingScreen: React.FC = () => {
           <Text style={styles.primaryButtonText}>Get Started</Text>
           <Icon name="arrow-forward" size={20} color={colors.neutral.white} />
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -88,9 +92,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.default,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   header: {
     alignItems: 'center',
@@ -119,8 +126,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   actionsContainer: {
-    flex: 1,
     marginTop: spacing.xl,
+    marginBottom: spacing.xl,
   },
   actionCard: {
     marginBottom: spacing.md,
