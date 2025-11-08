@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "721167168669",
+    "project_id": "smile-dental-booking-demo",
+    "storage_bucket": "smile-dental-booking-demo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721167168669:android:d7daebef3db7048507d074",
+        "android_client_info": {
+          "package_name": "com.patient"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2TVu-dN4wl04gcRpwlgGgVqyDwceOjaM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

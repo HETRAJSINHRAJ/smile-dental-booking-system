@@ -1,97 +1,209 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Patient Mobile App - Dental Booking System
 
-# Getting Started
+A React Native mobile application for patients to book dental appointments, manage their profile, and view appointment history.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+- **User Authentication**: Sign up, sign in, and password reset
+- **Home Dashboard**: View featured services, providers, and quick stats
+- **Services Browser**: Browse all available dental services
+- **Appointment Booking**: Multi-step booking flow
+- **Appointment Management**: View and manage appointments
+- **Profile Management**: Update user information and settings
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Tech Stack
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- React Native 0.82.1
+- TypeScript
+- Firebase (Auth, Firestore, Storage)
+- React Navigation 7.x
+- React Native Vector Icons
 
-```sh
-# Using npm
+## Prerequisites
+
+- Node.js >= 20
+- React Native development environment
+- iOS: Xcode 14+ and CocoaPods
+- Android: Android Studio and SDK 33+
+
+## Installation
+
+1. **Clone and navigate to the project**
+   ```bash
+   cd patient-mobile-app
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **iOS Setup**
+   ```bash
+   cd ios
+   bundle install
+   bundle exec pod install
+   cd ..
+   ```
+
+4. **Configure Firebase**
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Add iOS and Android apps
+   - Download configuration files:
+     - `google-services.json` → `android/app/`
+     - `GoogleService-Info.plist` → `ios/`
+
+5. **Environment Setup**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Firebase credentials
+   ```
+
+6. **Run the app**
+   ```bash
+   # iOS
+   npm run ios
+   
+   # Android
+   npm run android
+   ```
+
+## Project Structure
+
+```
+src/
+├── config/          # Firebase and app configuration
+├── contexts/        # React contexts (Auth, etc.)
+├── lib/            # Utility functions and helpers
+├── navigation/     # Navigation configuration
+├── screens/        # Screen components
+│   ├── auth/       # Authentication screens
+│   ├── main/       # Main tab screens
+│   ├── booking/    # Booking flow screens
+│   ├── appointments/
+│   └── profile/
+└── types/          # TypeScript type definitions
+```
+
+## Key Features Implemented
+
+### Authentication
+- Email/password authentication via Firebase
+- User profile creation with role assignment
+- Password reset functionality
+- Persistent authentication state
+
+### Navigation
+- Bottom tab navigation for main features
+- Stack navigation for booking flow
+- Conditional rendering based on auth state
+
+### Screens
+- **Home**: Dashboard with services and providers
+- **Services**: Browse all dental services
+- **Booking**: Start appointment booking
+- **Appointments**: View appointment history
+- **Profile**: Manage user account
+
+### Data Management
+- Firestore integration for real-time data
+- Generic CRUD operations
+- Type-safe data models
+- Provider availability checking
+
+## Development
+
+### Running in Development
+```bash
+# Start Metro bundler
 npm start
 
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# Run on iOS
 npm run ios
 
-# OR using Yarn
-yarn ios
+# Run on Android
+npm run android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Debugging
+- Use React Native Debugger or Flipper
+- Enable Fast Refresh for quick development
+- Check logs with `npx react-native log-ios` or `npx react-native log-android`
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+### Building for Production
 
-## Step 3: Modify your app
+**iOS**
+```bash
+cd ios
+xcodebuild -workspace patient.xcworkspace -scheme patient -configuration Release
+```
 
-Now that you have successfully run the app, let's make changes!
+**Android**
+```bash
+cd android
+./gradlew assembleRelease
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## Configuration
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### Firebase Setup
+1. Enable Authentication (Email/Password)
+2. Create Firestore database
+3. Set up security rules
+4. Enable Storage (optional)
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+### Environment Variables
+See `.env.example` for required variables:
+- Firebase configuration
+- API keys
+- Environment settings
 
-## Congratulations! :tada:
+## Troubleshooting
 
-You've successfully run and modified your React Native App. :partying_face:
+### iOS Issues
+- **Build fails**: Clean build folder and reinstall pods
+  ```bash
+  cd ios
+  xcodebuild clean
+  bundle exec pod install --repo-update
+  ```
 
-### Now what?
+### Android Issues
+- **Build fails**: Clean gradle cache
+  ```bash
+  cd android
+  ./gradlew clean
+  ```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+### Firebase Issues
+- Verify configuration in `.env`
+- Check Firebase console for app registration
+- Ensure google-services files are in correct locations
 
-# Troubleshooting
+## Next Steps
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+See `IMPLEMENTATION_GUIDE.md` for:
+- Complete booking flow implementation
+- Payment integration
+- Push notifications
+- Offline support
+- Performance optimization
+- Testing strategy
 
-# Learn More
+## Related Projects
 
-To learn more about React Native, take a look at the following resources:
+This mobile app is part of the dental-booking-system monorepo:
+- **patient-portal**: Web application (Next.js)
+- **admin-portal**: Admin dashboard (Next.js)
+- **patient-mobile-app**: This mobile app (React Native)
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## Resources
+
+- [React Native Docs](https://reactnative.dev/)
+- [React Navigation](https://reactnavigation.org/)
+- [Firebase for React Native](https://rnfirebase.io/)
+- [TypeScript](https://www.typescriptlang.org/)
+
+## License
+
+Part of the dental-booking-system project.
