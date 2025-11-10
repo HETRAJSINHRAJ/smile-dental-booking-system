@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import RNCalendarEvents from 'react-native-calendar-events';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -19,6 +20,8 @@ import { colors, typography, spacing, borderRadius, shadows } from '../../theme'
 import { Card } from '../../components/Card';
 import { getDocument } from '../../lib/firestore';
 import { Appointment, Service, Provider } from '../../types/firebase';
+import { PDFDownloadManager } from '../../utils/pdfDownloadManager';
+import { ReceiptPDFGenerator } from '../../utils/receiptPDFGenerator';
 
 type BookingSuccessScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -105,28 +108,43 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleDownloadReceipt = async () => {
-    if (!appointment) return;
+    if (!appointment) {
+      Alert.alert('Error', 'Appointment data not available');
+      return;
+    }
 
     try {
-      const RNHTMLtoPDF = require('react-native-html-to-pdf');
-      
-      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Helvetica,Arial,sans-serif;padding:30px;background:#FFF}.header{background:#22C55E;color:#FFF;padding:20px;border-radius:10px;text-align:center;position:relative;margin-bottom:16px}.badge{position:absolute;top:-6px;right:30px;background:#FFF;color:#15803D;padding:4px 12px;border-radius:4px;font-weight:bold;font-size:10px}.header-title{font-size:22px;font-weight:bold;margin-bottom:3px}.header-subtitle{font-size:11px}.section{margin-bottom:12px}.section-title{font-size:12px;font-weight:bold;margin-bottom:8px}.appointment-box{background:#F3F4F6;padding:10px;border-radius:6px}.appointment-grid{display:flex;justify-content:space-between}.appointment-column{width:48%}.appointment-item{margin-bottom:8px}.label{font-size:9px;color:#6B7280;margin-bottom:2px}.value{font-size:10px;font-weight:bold}.info-row{display:flex;justify-content:space-between;margin-bottom:5px}.info-label{font-size:9px}.info-value{font-size:9px;font-weight:bold;text-align:right;max-width:65%}.amount-box{background:#EFF6FF;padding:16px;border-radius:8px;margin-bottom:16px;border:1px solid #BFDBFE}.amount-title{font-size:13px;font-weight:bold;color:#1E40AF;margin-bottom:10px}.amount-row{display:flex;justify-content:space-between;margin-bottom:4px}.amount-label{font-size:9px}.amount-value{font-size:9px;font-weight:bold;text-align:right}.divider{border-bottom:1px solid #BFDBFE;margin-top:4px;margin-bottom:10px}.total-row{display:flex;justify-content:space-between}.total-label{font-size:10px;font-weight:bold}.total-value{font-size:10px;font-weight:bold;color:#1E40AF;text-align:right}.footer{margin-top:15px;text-align:center}.footer-text{font-size:9px;color:#6B7280;margin-bottom:2px}</style></head><body><div class="header"><div class="badge">PAID</div><div class="header-title">Payment Receipt</div><div class="header-subtitle">Appointment Reservation Confirmed</div></div><div class="section"><div class="section-title">Appointment Details</div><div class="appointment-box"><div class="appointment-grid"><div class="appointment-column"><div class="appointment-item"><div class="label">Service</div><div class="value">${appointment.serviceName}</div></div><div class="appointment-item"><div class="label">Date</div><div class="value">${formatDate(appointment.appointmentDate)}</div></div></div><div class="appointment-column"><div class="appointment-item"><div class="label">Provider</div><div class="value">${appointment.providerName}</div></div><div class="appointment-item"><div class="label">Time</div><div class="value">${formatTimeTo12Hour(appointment.startTime)}</div></div></div></div></div></div><div class="section"><div class="section-title">Patient Information</div><div><div class="info-row"><span class="info-label">Name:</span><span class="info-value">${appointment.patientName || 'N/A'}</span></div><div class="info-row"><span class="info-label">Email:</span><span class="info-value">${appointment.patientEmail || 'N/A'}</span></div><div class="info-row"><span class="info-label">Phone:</span><span class="info-value">${appointment.patientPhone || 'Not provided'}</span></div></div></div><div class="section"><div class="section-title">Payment Information</div><div><div class="info-row"><span class="info-label">Transaction ID:</span><span class="info-value">${appointment.confirmationNumber || 'N/A'}</span></div><div class="info-row"><span class="info-label">Payment Date:</span><span class="info-value">${formatDate(appointment.appointmentDate)}</span></div><div class="info-row"><span class="info-label">Payment Method:</span><span class="info-value">${(appointment.paymentMethod || 'Online').charAt(0).toUpperCase() + (appointment.paymentMethod || 'Online').slice(1)}</span></div></div></div><div class="section"><div class="amount-box"><div class="amount-title">Amount Paid</div><div class="amount-row"><span class="amount-label">Appointment Reservation Fee:</span><span class="amount-value">Rs. ${appointment.paymentAmount.toFixed(2)}</span></div><div class="divider"></div><div class="total-row"><span class="total-label">Total Paid:</span><span class="total-value">Rs. ${appointment.paymentAmount.toFixed(2)}</span></div></div></div><div class="footer"><div class="footer-text">This is a computer-generated receipt. No signature required.</div><div class="footer-text">Please keep this receipt for your records.</div></div></body></html>`;
+      // Generate HTML content using the utility
+      const htmlContent = ReceiptPDFGenerator.generateReceiptHTML({
+        appointment,
+        service,
+      });
 
-      const file = await RNHTMLtoPDF.convert({
-        html: htmlContent,
-        fileName: `receipt_${appointment.confirmationNumber}`,
-        directory: 'Documents',
-      });
-      
-      await Share.share({
-        url: `file://${file.filePath}`,
+      // Generate filename
+      const fileName = `receipt_${appointment.confirmationNumber || appointment.id}.pdf`;
+
+      // Download PDF with progress tracking
+      await PDFDownloadManager.downloadPDF({
+        htmlContent,
+        fileName,
         title: 'Appointment Receipt',
+        onProgress: (progress) => {
+          console.log(`Download progress: ${progress}%`);
+        },
+        onComplete: (filePath) => {
+          console.log(`Receipt downloaded successfully: ${filePath}`);
+        },
+        onError: (error) => {
+          console.error('Download error:', error);
+        },
       });
-      
-      Alert.alert('Success', 'Receipt PDF generated successfully!');
-    } catch (error) {
-      console.error('PDF error:', error);
-      Alert.alert('Error', `Install: npm install react-native-html-to-pdf`);
+    } catch (error: any) {
+      console.error('Receipt generation error:', error);
+      Alert.alert(
+        'Error',
+        'Failed to generate receipt. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -134,8 +152,6 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
     if (!appointment) return;
 
     try {
-      const RNCalendarEvents = require('react-native-calendar-events');
-      
       const status = await RNCalendarEvents.requestPermissions();
       
       if (status === 'authorized' || status === 'restricted') {
@@ -158,13 +174,20 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
           alarms: [{ date: -60 }],
         });
         
-        Alert.alert('Success', 'Appointment added to calendar');
+        Alert.alert('Success', 'Appointment added to calendar successfully!');
       } else {
-        Alert.alert('Permission Denied', 'Calendar permission is required. Please enable it in Settings.');
+        Alert.alert(
+          'Permission Required',
+          'Calendar permission is required to add appointments. Please enable it in Settings.',
+          [{ text: 'OK' }]
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Calendar error:', error);
-      Alert.alert('Error', `Failed to add to calendar: ${error.message || 'Unknown error'}`);
+      Alert.alert(
+        'Error',
+        `Failed to add to calendar: ${error.message || 'Unknown error'}`
+      );
     }
   };
 

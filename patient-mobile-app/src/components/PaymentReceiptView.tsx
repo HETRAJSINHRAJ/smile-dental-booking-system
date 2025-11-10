@@ -8,8 +8,10 @@ import {
   Alert,
   Share,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import RNCalendarEvents from 'react-native-calendar-events';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { Card } from './Card';
 import { format } from 'date-fns';
@@ -55,27 +57,43 @@ export const PaymentReceiptView: React.FC<PaymentReceiptViewProps> = ({
 }) => {
   const handleAddToCalendar = async () => {
     try {
-      const { default: RNCalendarEvents } = await import('react-native-calendar-events');
-      
+      // Request calendar permissions
       const status = await RNCalendarEvents.requestPermissions();
       
-      if (status === 'authorized') {
+      if (status === 'authorized' || status === 'restricted') {
+        const appointmentDate = new Date(appointmentData.date);
+        const [hours, minutes] = appointmentData.time.split(':').map(Number);
+        
+        const startDate = new Date(appointmentDate);
+        startDate.setHours(hours, minutes, 0, 0);
+        
+        const endDate = new Date(startDate);
+        endDate.setHours(hours + 1, minutes, 0, 0); // Default 1 hour duration
+        
         const eventConfig = {
           title: `${appointmentData.serviceName} - ${appointmentData.providerName}`,
-          startDate: new Date(appointmentData.date).toISOString(),
-          endDate: new Date(new Date(appointmentData.date).getTime() + 60 * 60 * 1000).toISOString(),
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
           location: 'Dental Clinic',
           notes: `Appointment with ${appointmentData.providerName}\nTransaction ID: ${paymentData.transactionId}`,
           alarms: [{ date: -60 }], // 1 hour before
         };
         
         await RNCalendarEvents.saveEvent(eventConfig.title, eventConfig);
-        Alert.alert('Success', 'Appointment added to calendar');
+        Alert.alert('Success', 'Appointment added to calendar successfully!');
       } else {
-        Alert.alert('Permission Denied', 'Calendar permission is required');
+        Alert.alert(
+          'Permission Required',
+          'Calendar permission is required to add appointments. Please enable it in Settings.',
+          [{ text: 'OK' }]
+        );
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add to calendar. Please add manually.');
+    } catch (error: any) {
+      console.error('Calendar error:', error);
+      Alert.alert(
+        'Error',
+        `Failed to add to calendar: ${error.message || 'Unknown error'}. Please add manually.`
+      );
     }
   };
 

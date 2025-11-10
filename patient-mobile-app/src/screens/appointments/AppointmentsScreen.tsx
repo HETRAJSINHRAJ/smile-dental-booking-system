@@ -116,8 +116,8 @@ const AppointmentsScreen: React.FC = () => {
           </TouchableOpacity>
           {item.status === 'confirmed' && (
             <TouchableOpacity style={[styles.actionButton, styles.cancelButton]}>
-              <Icon name="close-circle-outline" size={20} color={colors.error.main} />
-              <Text style={[styles.actionButtonText, { color: colors.error.main }]}>Cancel</Text>
+              <Icon name="close-circle-outline" size={20} color={colors.neutral[100] } />
+              <Text style={[styles.actionButtonText, { color: colors.neutral[100] }]}>Cancel</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   cancelButton: {
-    backgroundColor: colors.error.light,
+    backgroundColor: colors.error.dark
   },
   actionButtonText: {
     ...typography.labelMedium,

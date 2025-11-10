@@ -12,8 +12,12 @@ import { ToastProvider } from './src/contexts/ToastContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/onboarding/SplashScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
+import { setupNotificationHandlers, PDFDownloadManager } from './src/utils/pdfDownloadManager';
 
 const ONBOARDING_KEY = '@onboarding_completed';
+
+// Initialize notification handlers
+setupNotificationHandlers();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -23,6 +27,11 @@ function App() {
 
   useEffect(() => {
     checkOnboarding();
+    
+    // Initialize PDF download manager
+    PDFDownloadManager.initialize().catch(error => {
+      console.error('Failed to initialize PDF download manager:', error);
+    });
   }, []);
 
   const checkOnboarding = async () => {

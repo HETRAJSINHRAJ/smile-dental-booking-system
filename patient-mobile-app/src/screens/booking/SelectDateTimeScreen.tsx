@@ -7,9 +7,10 @@ import {
   ActivityIndicator,
   StatusBar,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getAllDocuments, getAvailableTimeSlots } from '../../lib/firestore';
+import { getDocument, getAvailableTimeSlots } from '../../lib/firestore';
 import { Provider, Service } from '../../types/firebase';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -63,18 +64,22 @@ const SelectDateTimeScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const loadData = async () => {
     try {
-      const [providersData, servicesData] = await Promise.all([
-        getAllDocuments<Provider>('providers', []),
-        getAllDocuments<Service>('services', []),
+      const [serviceData, providerData] = await Promise.all([
+        getDocument<Service>('services', serviceId),
+        getDocument<Provider>('providers', providerId),
       ]);
       
-      const selectedService = servicesData.find(s => s.id === serviceId);
-      const selectedProvider = providersData.find(p => p.id === providerId);
+      if (!serviceData || !providerData) {
+        Alert.alert('Error', 'Service or provider not found');
+        navigation.goBack();
+        return;
+      }
       
-      setService(selectedService || null);
-      setProvider(selectedProvider || null);
+      setService(serviceData);
+      setProvider(providerData);
     } catch (error) {
       console.error('Error loading data:', error);
+      Alert.alert('Error', 'Failed to load booking details');
     } finally {
       setLoading(false);
     }
@@ -133,9 +138,6 @@ const SelectDateTimeScreen: React.FC<Props> = ({ navigation, route }) => {
   const loadAvailableSlots = async () => {
     try {
       setLoadingSlots(true);
-      const allSlots = generateAllTimeSlots();
-      setAllTimeSlots(allSlots);
-      
       const date = new Date(selectedDate);
       const slots = await getAvailableTimeSlots(
         providerId,
@@ -143,8 +145,20 @@ const SelectDateTimeScreen: React.FC<Props> = ({ navigation, route }) => {
         service!.duration
       );
       setAvailableSlots(slots);
+
+      // Generate all possible time slots
+      const allSlots = generateAllTimeSlots();
+      setAllTimeSlots(allSlots);
+
+      if (slots.length === 0) {
+        Alert.alert(
+          'No Available Slots',
+          'No available slots for this date. Please select another date.'
+        );
+      }
     } catch (error) {
       console.error('Error loading slots:', error);
+      Alert.alert('Error', 'Failed to load available time slots');
       setAvailableSlots([]);
       setAllTimeSlots([]);
     } finally {
@@ -163,6 +177,7 @@ const SelectDateTimeScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleContinue = () => {
     if (!selectedDate || !selectedTime) {
+      Alert.alert('Selection Required', 'Please select both date and time');
       return;
     }
 

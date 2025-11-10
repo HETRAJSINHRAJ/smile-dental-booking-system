@@ -118,7 +118,7 @@ const HomeScreen: React.FC = () => {
                   styles.serviceCard,
                   { backgroundColor: bgColors[index] || colors.primary[100] },
                 ]}
-                onPress={() => navigation.navigate('Services')}
+                onPress={() => navigation.navigate('SelectService')}
               >
                 <View style={styles.serviceHeader}>
                   <Icon
