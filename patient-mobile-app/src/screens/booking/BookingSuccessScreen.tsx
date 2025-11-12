@@ -8,8 +8,8 @@ import {
   StatusBar,
   ScrollView,
   Share,
-  Alert,
 } from 'react-native';
+import { Alert } from '../../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RNCalendarEvents from 'react-native-calendar-events';
@@ -51,7 +51,7 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       const appointmentData = await getDocument<Appointment>('appointments', appointmentId);
 
       if (!appointmentData) {
-        Alert.alert('Error', 'Appointment not found');
+        Alert.error('Error', 'Appointment not found', [{ text: 'OK' }]);
         navigation.navigate('Main');
         return;
       }
@@ -68,7 +68,7 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       setProvider(providerData);
     } catch (error) {
       console.error('Error loading appointment details:', error);
-      Alert.alert('Error', 'Failed to load appointment details');
+      Alert.error('Error', 'Failed to load appointment details', [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleDownloadReceipt = async () => {
     if (!appointment) {
-      Alert.alert('Error', 'Appointment data not available');
+      Alert.error('Error', 'Appointment data not available', [{ text: 'OK' }]);
       return;
     }
 
@@ -140,7 +140,7 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       });
     } catch (error: any) {
       console.error('Receipt generation error:', error);
-      Alert.alert(
+      Alert.error(
         'Error',
         'Failed to generate receipt. Please try again.',
         [{ text: 'OK' }]
@@ -174,9 +174,9 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
           alarms: [{ date: -60 }],
         });
         
-        Alert.alert('Success', 'Appointment added to calendar successfully!');
+        Alert.success('Success', 'Appointment added to calendar successfully!', [{ text: 'OK' }]);
       } else {
-        Alert.alert(
+        Alert.warning(
           'Permission Required',
           'Calendar permission is required to add appointments. Please enable it in Settings.',
           [{ text: 'OK' }]
@@ -184,9 +184,10 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       }
     } catch (error: any) {
       console.error('Calendar error:', error);
-      Alert.alert(
+      Alert.error(
         'Error',
-        `Failed to add to calendar: ${error.message || 'Unknown error'}`
+        `Failed to add to calendar: ${error.message || 'Unknown error'}`,
+        [{ text: 'OK' }]
       );
     }
   };
@@ -215,6 +216,24 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background.default} />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.navigate('Main')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="chevron-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Booking Confirmed</Text>
+          
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.headerBorder} />
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -400,25 +419,46 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleAddToCalendar}
+            activeOpacity={0.7}
           >
-            <Icon name="calendar-outline" size={20} color={colors.secondary[500]} />
-            <Text style={styles.actionButtonText}>Add to Calendar</Text>
+            <View style={styles.actionButtonIconContainer}>
+              <Icon name="calendar-outline" size={22} color={colors.secondary[500]} />
+            </View>
+            <View style={styles.actionButtonContent}>
+              <Text style={styles.actionButtonText}>Add to Calendar</Text>
+              <Text style={styles.actionButtonSubtext}>Save to your device</Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleDownloadReceipt}
+            activeOpacity={0.7}
           >
-            <Icon name="download-outline" size={20} color={colors.secondary[500]} />
-            <Text style={styles.actionButtonText}>Download Receipt</Text>
+            <View style={styles.actionButtonIconContainer}>
+              <Icon name="download-outline" size={22} color={colors.secondary[500]} />
+            </View>
+            <View style={styles.actionButtonContent}>
+              <Text style={styles.actionButtonText}>Download Receipt</Text>
+              <Text style={styles.actionButtonSubtext}>Get PDF copy</Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleShare}
+            activeOpacity={0.7}
           >
-            <Icon name="share-social-outline" size={20} color={colors.secondary[500]} />
-            <Text style={styles.actionButtonText}>Share</Text>
+            <View style={styles.actionButtonIconContainer}>
+              <Icon name="share-social-outline" size={22} color={colors.secondary[500]} />
+            </View>
+            <View style={styles.actionButtonContent}>
+              <Text style={styles.actionButtonText}>Share</Text>
+              <Text style={styles.actionButtonSubtext}>Send to others</Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -460,11 +500,48 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: colors.background.default,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl + 80,
+  },
+  header: {
+    backgroundColor: colors.background.paper,
+    paddingTop: spacing.xs,
+    zIndex: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: -spacing.xs,
+  },
+  headerTitle: {
+    flex: 1,
+    ...typography.titleLarge,
+    color: colors.text.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 17,
+    letterSpacing: -0.41,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  headerBorder: {
+    height: 0.5,
+    backgroundColor: colors.border.light,
+    marginHorizontal: spacing.md,
   },
   successContainer: {
     alignItems: 'center',
@@ -488,7 +565,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     padding: spacing.lg,
     backgroundColor: colors.primary[50],
-    borderWidth: 2,
+    borderWidth: 0.5,
     borderColor: colors.secondary[500],
   },
   confirmationContent: {
@@ -513,18 +590,26 @@ const styles = StyleSheet.create({
   detailsCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   paymentCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   infoCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   notesCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -652,27 +737,41 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   actionButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   actionButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.background.paper,
-    borderWidth: 1,
-    borderColor: colors.primary[100],
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
+    ...shadows.small,
+  },
+  actionButtonIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.secondary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  actionButtonContent: {
+    flex: 1,
   },
   actionButtonText: {
-    ...typography.labelMedium,
-    color: colors.secondary[500],
+    ...typography.titleSmall,
+    color: colors.text.primary,
     fontWeight: '600',
+    marginBottom: 2,
+  },
+  actionButtonSubtext: {
+    ...typography.labelSmall,
+    color: colors.text.secondary,
   },
   bottomBar: {
     position: 'absolute',
@@ -681,8 +780,8 @@ const styles = StyleSheet.create({
     right: 0,
     padding: spacing.lg,
     backgroundColor: colors.background.paper,
-    borderTopWidth: 1,
-    borderTopColor: colors.primary[50],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border.light,
     ...shadows.small,
   },
   homeButton: {

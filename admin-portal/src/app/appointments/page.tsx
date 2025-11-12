@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 import TodayAppointments from '@/components/appointments/TodayAppointments';
 import CreateAppointmentDialog from '@/components/appointments/CreateAppointmentDialog';
+import { ReceiptManager } from '@/components/receipts/ReceiptManager';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
@@ -577,6 +578,23 @@ export default function AppointmentsPage() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Receipt Management Section */}
+                <div className="col-span-2 pt-6 mt-6 border-t border-gray-200">
+                  <ReceiptManager 
+                    appointment={selectedAppointment}
+                    onReceiptGenerated={(url) => {
+                      // Update the local state with the new receipt URL
+                      setSelectedAppointment(prev => prev ? {
+                        ...prev,
+                        receiptUrl: url,
+                        receiptGenerated: true,
+                      } : null);
+                      // Refresh appointments list
+                      fetchAppointments();
+                    }}
+                  />
                 </div>
 
                 {/* Footer metadata */}

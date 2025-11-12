@@ -3,10 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
+  TextInput,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,7 +17,6 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { getAllDocuments } from '../../lib/firestore';
 import { Service } from '../../types/firebase';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
-import { Card } from '../../components/Card';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 type ServicesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -23,16 +24,33 @@ type ServicesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList
 const ServicesScreen: React.FC = () => {
   const navigation = useNavigation<ServicesScreenNavigationProp>();
   const [services, setServices] = useState<Service[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadServices();
   }, []);
 
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredServices(services);
+    } else {
+      const filtered = services.filter(
+        (service) =>
+          service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          service.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredServices(filtered);
+    }
+  }, [searchQuery, services]);
+
   const loadServices = async () => {
     try {
       const data = await getAllDocuments<Service>('services', []);
       setServices(data);
+      setFilteredServices(data);
     } catch (error) {
       console.error('Error loading services:', error);
     } finally {
@@ -40,68 +58,10 @@ const ServicesScreen: React.FC = () => {
     }
   };
 
-  const renderService = ({ item, index }: { item: Service; index: number }) => {
-    const bgColors = [
-      colors.primary[100],
-      colors.primary[50],
-      colors.accent.light,
-      colors.secondary[500],
-    ];
-    const isLast = index % 4 === 3;
-    const bgColor = bgColors[index % 4];
-    
-    return (
-      <Card style={styles.serviceCard}>
-        <TouchableOpacity
-          style={[styles.serviceContent, { backgroundColor: bgColor }]}
-          onPress={() => navigation.navigate('SelectService')}
-        >
-          <View style={[styles.serviceIcon, isLast && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Icon name="medical" size={32} color={isLast ? colors.neutral.white : colors.secondary[500]} />
-          </View>
-          <View style={styles.serviceInfo}>
-            <Text style={[styles.serviceName, isLast && { color: colors.neutral.white }]}>
-              {item.name}
-            </Text>
-            <Text
-              style={[styles.serviceDescription, isLast && { color: colors.neutral.white, opacity: 0.8 }]}
-              numberOfLines={2}
-            >
-              {item.description}
-            </Text>
-            <View style={styles.serviceFooter}>
-              <View style={styles.priceContainer}>
-                <Text style={[styles.servicePrice, isLast && { color: colors.neutral.white }]}>
-                  ₹{item.price}
-                </Text>
-                <Text style={[styles.priceLabel, isLast && { color: colors.neutral.white, opacity: 0.8 }]}>
-                  Per session
-                </Text>
-              </View>
-              <View style={styles.durationContainer}>
-                <Icon
-                  name="time-outline"
-                  size={16}
-                  color={isLast ? colors.neutral.white : colors.text.secondary}
-                />
-                <Text style={[styles.serviceDuration, isLast && { color: colors.neutral.white, opacity: 0.8 }]}>
-                  {item.duration} min
-                </Text>
-              </View>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[styles.arrowButton, isLast && { backgroundColor: 'rgba(255,255,255,0.3)' }]}
-          >
-            <Icon
-              name="arrow-forward"
-              size={20}
-              color={isLast ? colors.neutral.white : colors.text.primary}
-            />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Card>
-    );
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadServices();
+    setRefreshing(false);
   };
 
   if (loading) {
@@ -115,17 +75,141 @@ const ServicesScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background.default} />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Our Services</Text>
-        <Text style={styles.headerSubtitle}>Choose the service you need</Text>
-      </View>
-      <FlatList
-        data={services}
-        renderItem={renderService}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+      
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-      />
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary[500]}
+            colors={[colors.primary[500]]}
+            progressBackgroundColor={colors.background.paper}
+          />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Our Services</Text>
+            <Text style={styles.headerSubtitle}>
+              {filteredServices.length} {filteredServices.length === 1 ? 'service' : 'services'} available
+            </Text>
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Icon name="search-outline" size={20} color={colors.text.secondary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search services..."
+            placeholderTextColor={colors.text.secondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Icon name="close-circle" size={20} color={colors.text.secondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Services Grid */}
+        <View style={styles.servicesGrid}>
+          {filteredServices.map((service, index) => {
+            const bgColors = [
+              colors.primary[100],
+              colors.primary[50],
+              colors.accent.light,
+              colors.secondary[500],
+            ];
+            const isDark = index % 4 === 3;
+            const bgColor = bgColors[index % 4];
+
+            return (
+              <TouchableOpacity
+                key={service.id}
+                style={[styles.serviceCard, { backgroundColor: bgColor }]}
+                onPress={() => navigation.navigate('SelectService')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.serviceHeader}>
+                  <View style={[styles.iconContainer, isDark && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <Icon
+                      name="medical"
+                      size={24}
+                      color={isDark ? colors.neutral.white : colors.secondary[500]}
+                    />
+                  </View>
+                </View>
+
+                <Text
+                  style={[styles.serviceName, isDark && { color: colors.neutral.white }]}
+                  numberOfLines={2}
+                >
+                  {service.name}
+                </Text>
+
+                <Text
+                  style={[styles.serviceDescription, isDark && { color: colors.neutral.white, opacity: 0.7 }]}
+                  numberOfLines={2}
+                >
+                  {service.description}
+                </Text>
+
+                <View style={styles.serviceFooter}>
+                  <View style={styles.priceSection}>
+                    <Text style={[styles.servicePrice, isDark && { color: colors.neutral.white }]}>
+                      ₹{service.price}
+                    </Text>
+                    <Text style={[styles.priceLabel, isDark && { color: colors.neutral.white, opacity: 0.7 }]}>
+                      Per session
+                    </Text>
+                  </View>
+
+                  <View style={styles.durationBadge}>
+                    <Icon
+                      name="time-outline"
+                      size={14}
+                      color={isDark ? colors.neutral.white : colors.text.secondary}
+                    />
+                    <Text style={[styles.durationText, isDark && { color: colors.neutral.white, opacity: 0.7 }]}>
+                      {service.duration}m
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.arrowButton, isDark && { backgroundColor: 'rgba(255,255,255,0.3)' }]}
+                  onPress={() => navigation.navigate('SelectService')}
+                >
+                  <Icon
+                    name="arrow-forward"
+                    size={18}
+                    color={isDark ? colors.neutral.white : colors.text.primary}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Empty State */}
+        {filteredServices.length === 0 && (
+          <View style={styles.emptyState}>
+            <Icon name="search-outline" size={64} color={colors.text.secondary} />
+            <Text style={styles.emptyStateTitle}>No services found</Text>
+            <Text style={styles.emptyStateText}>
+              {searchQuery.trim() === '' 
+                ? 'Pull down to refresh and load services'
+                : 'Try adjusting your search to find what you\'re looking for'}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -141,65 +225,96 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background.default,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
+  },
   header: {
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
   },
   headerTitle: {
-    ...typography.headlineLarge,
+    ...typography.headlineMedium,
     color: colors.text.primary,
+    fontWeight: '700',
     marginBottom: spacing.xs,
   },
   headerSubtitle: {
-    ...typography.bodyLarge,
+    ...typography.bodyMedium,
     color: colors.text.secondary,
   },
-  listContent: {
-    padding: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  serviceCard: {
-    marginBottom: spacing.md,
-    ...shadows.medium,
-    overflow: 'hidden',
-  },
-  serviceContent: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    backgroundColor: colors.background.paper,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
+    ...shadows.small,
   },
-  serviceIcon: {
-    width: 64,
-    height: 64,
-    backgroundColor: colors.primary[50],
+  searchIcon: {
+    marginRight: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    ...typography.bodyMedium,
+    color: colors.text.primary,
+    paddingVertical: spacing.md,
+  },
+  clearButton: {
+    padding: spacing.xs,
+  },
+  servicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'space-between',
+  },
+  serviceCard: {
+    width: '47.5%',
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.md,
+    minHeight: 200,
+    ...shadows.small,
+    position: 'relative',
+  },
+  serviceHeader: {
+    marginBottom: spacing.sm,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.lg,
+    backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  serviceInfo: {
-    flex: 1,
   },
   serviceName: {
-    ...typography.titleLarge,
+    ...typography.titleMedium,
     color: colors.text.primary,
     fontWeight: '600',
     marginBottom: spacing.xs,
+    minHeight: 44,
   },
   serviceDescription: {
-    ...typography.bodyMedium,
+    ...typography.bodySmall,
     color: colors.text.secondary,
     marginBottom: spacing.sm,
-    lineHeight: 20,
+    lineHeight: 18,
+    minHeight: 36,
   },
   serviceFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    marginTop: 'auto',
   },
-  priceContainer: {
+  priceSection: {
     flexDirection: 'column',
   },
   servicePrice: {
@@ -210,24 +325,50 @@ const styles = StyleSheet.create({
   priceLabel: {
     ...typography.bodySmall,
     color: colors.text.secondary,
+    fontSize: 11,
   },
-  durationContainer: {
+  durationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
   },
-  serviceDuration: {
-    ...typography.bodySmall,
+  durationText: {
+    ...typography.labelSmall,
     color: colors.text.secondary,
+    fontSize: 11,
   },
   arrowButton: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 36,
+    height: 36,
     borderRadius: borderRadius.full,
     backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: spacing.sm,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl * 2,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyStateTitle: {
+    ...typography.titleLarge,
+    color: colors.text.primary,
+    fontWeight: '600',
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  emptyStateText: {
+    ...typography.bodyMedium,
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
 });
 

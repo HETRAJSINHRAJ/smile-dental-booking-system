@@ -5,3 +5,6 @@ export { Input } from './Input';
 export { TabBar } from './TabBar';
 export { Toast } from './Toast';
 export type { ToastType } from './Toast';
+export { CustomAlert } from './CustomAlert';
+export type { AlertButton } from './CustomAlert';
+export { AlertProvider } from './AlertProvider';

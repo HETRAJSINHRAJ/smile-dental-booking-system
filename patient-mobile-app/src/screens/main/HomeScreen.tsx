@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -28,6 +29,7 @@ const HomeScreen: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -46,6 +48,12 @@ const HomeScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   };
 
   const getGreeting = () => {
@@ -72,6 +80,15 @@ const HomeScreen: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary[500]}
+            colors={[colors.primary[500]]}
+            progressBackgroundColor={colors.background.paper}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>

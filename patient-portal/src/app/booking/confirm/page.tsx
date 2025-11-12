@@ -154,6 +154,7 @@ function ConfirmBookingContent() {
         serviceName: service.name,
         providerId: provider.id,
         providerName: provider.name,
+        providerImageUrl: provider.imageUrl,
         appointmentDate: Timestamp.fromDate(appointmentDate),
         startTime: time!,
         endTime,

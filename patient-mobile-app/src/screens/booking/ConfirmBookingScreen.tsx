@@ -161,6 +161,7 @@ const ConfirmBookingScreen: React.FC<Props> = ({ navigation, route }) => {
         serviceName: service.name,
         providerId: provider.id,
         providerName: provider.name,
+        providerImageUrl: provider.imageUrl,
         appointmentDate: firestore.Timestamp.fromDate(appointmentDate),
         startTime: time,
         endTime,
@@ -230,14 +231,20 @@ const ConfirmBookingScreen: React.FC<Props> = ({ navigation, route }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirm Appointment</Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="chevron-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Confirm Appointment</Text>
+          
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.headerBorder} />
       </View>
 
       <ScrollView
@@ -497,56 +504,79 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
+    backgroundColor: colors.background.paper,
+    paddingTop: spacing.xs,
+    zIndex: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.small,
+    marginLeft: -spacing.xs,
   },
   headerTitle: {
-    ...typography.headlineMedium,
+    flex: 1,
+    ...typography.titleLarge,
     color: colors.text.primary,
-    fontWeight: '700',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 17,
+    letterSpacing: -0.41,
   },
-  headerRight: {
+  headerSpacer: {
     width: 44,
+  },
+  headerBorder: {
+    height: 0.5,
+    backgroundColor: colors.border.light,
+    marginHorizontal: spacing.md,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: colors.background.default,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl + 80,
   },
   detailsCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   infoCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   notesCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   paymentCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   policyCard: {
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -603,8 +633,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   infoDivider: {
-    height: 1,
-    backgroundColor: colors.primary[50],
+    height: 0.5,
+    backgroundColor: colors.border.light,
     marginVertical: spacing.sm,
   },
   infoLabel: {
@@ -622,8 +652,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...typography.bodyMedium,
     color: colors.text.primary,
-    borderWidth: 1,
-    borderColor: colors.primary[100],
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
     minHeight: 100,
   },
   paymentBreakdown: {
@@ -647,8 +677,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   paymentDivider: {
-    height: 1,
-    backgroundColor: colors.primary[50],
+    height: 0.5,
+    backgroundColor: colors.border.light,
     marginVertical: spacing.md,
   },
   paymentLabelTotal: {
@@ -701,8 +731,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.primary[50],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border.light,
   },
   policyAgreementText: {
     ...typography.bodyMedium,
@@ -718,16 +748,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     backgroundColor: colors.background.paper,
-    borderTopWidth: 1,
-    borderTopColor: colors.primary[50],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border.light,
     ...shadows.small,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: colors.primary[100],
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -6,7 +6,6 @@ import { db } from "@/lib/firebase/config";
 import {
   Sparkles,
   Clock,
-  DollarSign,
   CheckCircle,
   Star,
   ArrowRight,
@@ -293,7 +292,6 @@ export default function ServicesPage() {
                       <span>{service.duration} minutes</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
                       <span className="font-semibold text-blue-600 text-lg">
                         {formatCurrency(service.price)}
                       </span>

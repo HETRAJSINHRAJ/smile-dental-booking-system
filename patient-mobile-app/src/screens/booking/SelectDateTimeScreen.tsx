@@ -204,20 +204,51 @@ const SelectDateTimeScreen: React.FC<Props> = ({ navigation, route }) => {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Date & Time</Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="chevron-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Select Date & Time</Text>
+          
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.headerBorder} />
       </View>
 
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
+
+        {/* Progress Indicator */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressStep}>
+            <View style={[styles.progressCircle, styles.progressCircleActive]}>
+              <Icon name="checkmark" size={16} color={colors.neutral.white} />
+            </View>
+            <Text style={styles.progressLabelActive}>Service</Text>
+          </View>
+          <View style={styles.progressLine} />
+          <View style={styles.progressStep}>
+            <View style={[styles.progressCircle, styles.progressCircleActive]}>
+              <Icon name="checkmark" size={16} color={colors.neutral.white} />
+            </View>
+            <Text style={styles.progressLabelActive}>Provider</Text>
+          </View>
+          <View style={styles.progressLine} />
+          <View style={styles.progressStep}>
+            <View style={[styles.progressCircle, styles.progressCircleActive]}>
+              <Text style={styles.progressCircleTextActive}>3</Text>
+            </View>
+            <Text style={styles.progressLabelActive}>Date & Time</Text>
+          </View>
+        </View>
         {/* Selection Summary */}
         <View style={styles.summaryContainer}>
           <Card style={styles.summaryCard}>
@@ -405,32 +436,98 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
+    backgroundColor: colors.background.paper,
+    paddingTop: spacing.xs,
+    zIndex: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.small,
+    marginLeft: -spacing.xs,
   },
   headerTitle: {
-    ...typography.headlineMedium,
+    flex: 1,
+    ...typography.titleLarge,
     color: colors.text.primary,
-    fontWeight: '700',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 17,
+    letterSpacing: -0.41,
   },
-  headerRight: {
+  headerSpacer: {
     width: 44,
+  },
+  headerBorder: {
+    height: 0.5,
+    backgroundColor: colors.border.light,
+    marginHorizontal: spacing.md,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  progressStep: {
+    alignItems: 'center',
+  },
+  progressCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background.paper,
+    borderWidth: 1.5,
+    borderColor: colors.border.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  progressCircleActive: {
+    backgroundColor: colors.secondary[500],
+    borderColor: colors.secondary[500],
+  },
+  progressCircleText: {
+    ...typography.labelMedium,
+    color: colors.text.secondary,
+    fontWeight: '600',
+  },
+  progressCircleTextActive: {
+    ...typography.labelMedium,
+    color: colors.neutral.white,
+    fontWeight: '600',
+  },
+  progressLabel: {
+    ...typography.labelSmall,
+    color: colors.text.secondary,
+  },
+  progressLabelActive: {
+    ...typography.labelSmall,
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  progressLine: {
+    width: 32,
+    height: 1.5,
+    backgroundColor: colors.border.light,
+    marginHorizontal: spacing.xs,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: colors.background.default,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl * 2,
   },
   summaryContainer: {
     paddingHorizontal: spacing.lg,
@@ -438,6 +535,8 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     padding: spacing.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -447,8 +546,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryDivider: {
-    width: 1,
-    backgroundColor: colors.primary[100],
+    width: 0.5,
+    backgroundColor: colors.border.light,
     marginHorizontal: spacing.md,
   },
   summaryLabel: {
@@ -467,8 +566,8 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   summaryDividerHorizontal: {
-    height: 1,
-    backgroundColor: colors.primary[100],
+    height: 0.5,
+    backgroundColor: colors.border.light,
     marginVertical: spacing.md,
   },
   selectedSlotContainer: {
@@ -505,8 +604,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.background.paper,
-    borderWidth: 2,
-    borderColor: colors.primary[100],
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
     alignItems: 'center',
   },
   dateCardActive: {
@@ -535,6 +634,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     padding: spacing.xl * 2,
     alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   emptyTimeIcon: {
     width: 64,
@@ -575,8 +676,8 @@ const styles = StyleSheet.create({
   },
   legendDotBooked: {
     backgroundColor: colors.background.paper,
-    borderWidth: 2,
-    borderColor: colors.primary[200],
+    borderWidth: 1.5,
+    borderColor: colors.border.main,
   },
   legendText: {
     ...typography.labelSmall,
@@ -593,8 +694,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.background.paper,
-    borderWidth: 2,
-    borderColor: colors.primary[100],
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
     alignItems: 'center',
   },
   timeSlotSelected: {
@@ -603,7 +704,8 @@ const styles = StyleSheet.create({
   },
   timeSlotDisabled: {
     backgroundColor: colors.background.default,
-    borderColor: colors.primary[50],
+    borderColor: colors.border.light,
+    opacity: 0.5,
   },
   timeSlotText: {
     ...typography.labelMedium,
@@ -620,8 +722,8 @@ const styles = StyleSheet.create({
   bottomBar: {
     padding: spacing.lg,
     backgroundColor: colors.background.paper,
-    borderTopWidth: 1,
-    borderTopColor: colors.primary[50],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border.light,
     ...shadows.small,
   },
   continueButton: {

@@ -3,12 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
   Image,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAllDocuments } from '../../lib/firestore';
@@ -83,65 +82,6 @@ const SelectProviderScreen: React.FC<Props> = ({ navigation, route }) => {
     return filterSpecialty === 'all' || provider.specialty === filterSpecialty;
   });
 
-  const renderProvider = ({ item, index }: { item: Provider; index: number }) => (
-    <TouchableOpacity
-      style={styles.providerCard}
-      onPress={() => handleProviderSelect(item)}
-      activeOpacity={0.7}
-    >
-      <Card style={styles.cardInner}>
-        <View style={styles.providerHeader}>
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.providerImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.providerImagePlaceholder}>
-              <Icon name="person" size={40} color={colors.secondary[500]} />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.providerInfo}>
-          <View style={styles.providerNameRow}>
-            <Text style={styles.providerName}>{item.name}</Text>
-            {item.rating && (
-              <View style={styles.ratingBadge}>
-                <Icon name="star" size={12} color="#FCD34D" />
-                <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.providerSpecialty}>{item.specialty}</Text>
-          
-          <Text style={styles.providerBio} numberOfLines={2}>
-            {item.bio}
-          </Text>
-
-          <View style={styles.providerFooter}>
-            <View style={styles.experienceContainer}>
-              <Icon name="time-outline" size={16} color={colors.text.secondary} />
-              <Text style={styles.experienceText}>
-                {item.yearsOfExperience} years
-              </Text>
-            </View>
-            
-            {item.acceptingNewPatients && (
-              <View style={styles.availableBadge}>
-                <Text style={styles.availableText}>Available</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.arrowButton}>
-          <Icon name="arrow-forward" size={20} color={colors.secondary[500]} />
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -176,39 +116,73 @@ const SelectProviderScreen: React.FC<Props> = ({ navigation, route }) => {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Provider</Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="chevron-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Select Provider</Text>
+          
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={styles.headerBorder} />
       </View>
 
-      {/* Selected Service Info */}
-      {service && (
-        <View style={styles.serviceInfoContainer}>
-          <Card style={styles.serviceInfoCard}>
-            <View style={styles.serviceInfoContent}>
-              <View style={styles.serviceInfoLeft}>
-                <Text style={styles.serviceInfoLabel}>Selected Service</Text>
-                <Text style={styles.serviceInfoName}>{service.name}</Text>
-              </View>
-              <View style={styles.serviceInfoRight}>
-                <View style={styles.serviceDurationBadge}>
-                  <Icon name="time-outline" size={14} color={colors.text.secondary} />
-                  <Text style={styles.serviceDurationText}>{service.duration} min</Text>
-                </View>
-                <Text style={styles.serviceInfoPrice}>₹{service.price}</Text>
-              </View>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Progress Indicator */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressStep}>
+            <View style={[styles.progressCircle, styles.progressCircleActive]}>
+              <Icon name="checkmark" size={16} color={colors.neutral.white} />
             </View>
-          </Card>
+            <Text style={styles.progressLabelActive}>Service</Text>
+          </View>
+          <View style={styles.progressLine} />
+          <View style={styles.progressStep}>
+            <View style={[styles.progressCircle, styles.progressCircleActive]}>
+              <Text style={styles.progressCircleTextActive}>2</Text>
+            </View>
+            <Text style={styles.progressLabelActive}>Provider</Text>
+          </View>
+          <View style={styles.progressLine} />
+          <View style={styles.progressStep}>
+            <View style={styles.progressCircle}>
+              <Text style={styles.progressCircleText}>3</Text>
+            </View>
+            <Text style={styles.progressLabel}>Date & Time</Text>
+          </View>
         </View>
-      )}
 
-      {/* Specialty Filter */}
-      <View style={styles.filterContainer}>
+        {/* Selected Service Info */}
+        {service && (
+          <View style={styles.serviceInfoContainer}>
+            <Card style={styles.serviceInfoCard}>
+              <View style={styles.serviceInfoContent}>
+                <View style={styles.serviceInfoLeft}>
+                  <Text style={styles.serviceInfoLabel}>Selected Service</Text>
+                  <Text style={styles.serviceInfoName}>{service.name}</Text>
+                </View>
+                <View style={styles.serviceInfoRight}>
+                  <View style={styles.serviceDurationBadge}>
+                    <Icon name="time-outline" size={14} color={colors.text.secondary} />
+                    <Text style={styles.serviceDurationText}>{service.duration} min</Text>
+                  </View>
+                  <Text style={styles.serviceInfoPrice}>₹{service.price}</Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Specialty Filter */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -234,17 +208,87 @@ const SelectProviderScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
 
-      {/* Providers List */}
-      <FlatList
-        data={filteredProviders}
-        renderItem={renderProvider}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmptyState}
-      />
+        {/* Providers Grid */}
+        {filteredProviders.length > 0 ? (
+          <View style={styles.providersGrid}>
+            {filteredProviders.map((provider) => (
+              <TouchableOpacity
+                key={provider.id}
+                style={styles.providerCard}
+                onPress={() => handleProviderSelect(provider)}
+                activeOpacity={0.7}
+              >
+                {/* Provider Photo */}
+                <View style={styles.providerImageContainer}>
+                  {provider.imageUrl ? (
+                    <Image
+                      source={{ uri: provider.imageUrl }}
+                      style={styles.providerImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.providerImagePlaceholder}>
+                      <Icon name="person" size={48} color={colors.secondary[500]} />
+                    </View>
+                  )}
+                  
+                  {/* Rating Badge */}
+                  {provider.rating && (
+                    <View style={styles.ratingBadge}>
+                      <Icon name="star" size={12} color="#FCD34D" />
+                      <Text style={styles.ratingText}>{provider.rating.toFixed(1)}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Provider Details */}
+                <View style={styles.providerDetails}>
+                  <Text style={styles.providerName} numberOfLines={1}>
+                    {provider.name}
+                  </Text>
+                  <Text style={styles.providerSpecialty} numberOfLines={1}>
+                    {provider.specialty}
+                  </Text>
+                  
+                  <Text style={styles.providerBio} numberOfLines={2}>
+                    {provider.bio}
+                  </Text>
+
+                  <View style={styles.providerFooter}>
+                    <View style={styles.experienceContainer}>
+                      <Icon name="time-outline" size={14} color={colors.text.secondary} />
+                      <Text style={styles.experienceText}>
+                        {provider.yearsOfExperience}y exp
+                      </Text>
+                    </View>
+                    
+                    {provider.acceptingNewPatients && (
+                      <View style={styles.availableBadge}>
+                        <Text style={styles.availableText}>Available</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          renderEmptyState()
+        )}
+
+        {/* Help Section */}
+        <View style={styles.helpSection}>
+          <Text style={styles.helpTitle}>Need help choosing a provider?</Text>
+          <Text style={styles.helpText}>
+            Our team can help you find the right dentist for your needs
+          </Text>
+          <TouchableOpacity style={styles.helpButton}>
+            <Text style={styles.helpButtonText}>Contact Us</Text>
+            <Icon name="arrow-forward" size={16} color={colors.neutral.white} />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -260,38 +304,108 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background.default,
   },
+  scrollView: {
+    flex: 1,
+    backgroundColor: colors.background.default,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl * 2,
+  },
   header: {
+    backgroundColor: colors.background.paper,
+    paddingTop: spacing.xs,
+    zIndex: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.background.default,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.small,
+    marginLeft: -spacing.xs,
   },
   headerTitle: {
-    ...typography.headlineMedium,
+    flex: 1,
+    ...typography.titleLarge,
     color: colors.text.primary,
-    fontWeight: '700',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 17,
+    letterSpacing: -0.41,
   },
-  headerRight: {
+  headerSpacer: {
     width: 44,
+  },
+  headerBorder: {
+    height: 0.5,
+    backgroundColor: colors.border.light,
+    marginHorizontal: spacing.md,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  progressStep: {
+    alignItems: 'center',
+  },
+  progressCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background.paper,
+    borderWidth: 1.5,
+    borderColor: colors.border.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  progressCircleActive: {
+    backgroundColor: colors.secondary[500],
+    borderColor: colors.secondary[500],
+  },
+  progressCircleText: {
+    ...typography.labelMedium,
+    color: colors.text.secondary,
+    fontWeight: '600',
+  },
+  progressCircleTextActive: {
+    ...typography.labelMedium,
+    color: colors.neutral.white,
+    fontWeight: '600',
+  },
+  progressLabel: {
+    ...typography.labelSmall,
+    color: colors.text.secondary,
+  },
+  progressLabelActive: {
+    ...typography.labelSmall,
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  progressLine: {
+    width: 32,
+    height: 1.5,
+    backgroundColor: colors.border.light,
+    marginHorizontal: spacing.xs,
   },
   serviceInfoContainer: {
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   serviceInfoCard: {
     padding: spacing.md,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   serviceInfoContent: {
     flexDirection: 'row',
@@ -329,20 +443,19 @@ const styles = StyleSheet.create({
     color: colors.secondary[500],
     fontWeight: '700',
   },
-  filterContainer: {
-    paddingBottom: spacing.md,
-  },
   filterScroll: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.xs,
   },
   filterChip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.full,
     backgroundColor: colors.background.paper,
-    borderWidth: 1,
-    borderColor: colors.primary[100],
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
   },
   filterChipActive: {
     backgroundColor: colors.secondary[500],
@@ -356,64 +469,64 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: colors.neutral.white,
   },
-  listContent: {
+  providersGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl * 2,
+    justifyContent: 'space-between',
   },
   providerCard: {
-    marginBottom: spacing.lg,
+    width: '48%',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.xl,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...shadows.small,
   },
-  cardInner: {
-    padding: spacing.lg,
-    flexDirection: 'row',
-  },
-  providerHeader: {
+  providerImageContainer: {
     position: 'relative',
-    marginRight: spacing.md,
+    height: 140,
+    backgroundColor: colors.primary[50],
   },
   providerImage: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.xl,
+    width: '100%',
+    height: '100%',
   },
   providerImagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.primary[50],
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  providerInfo: {
-    flex: 1,
-  },
-  providerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  providerName: {
-    ...typography.titleLarge,
-    color: colors.text.primary,
-    fontWeight: '600',
-    flex: 1,
+    backgroundColor: colors.primary[50],
   },
   ratingBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.background.paper,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: borderRadius.full,
     ...shadows.small,
-    marginLeft: spacing.sm,
   },
   ratingText: {
     ...typography.labelSmall,
     color: colors.text.primary,
     fontWeight: '700',
+  },
+  providerDetails: {
+    padding: spacing.md,
+  },
+  providerName: {
+    ...typography.titleMedium,
+    color: colors.text.primary,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   providerSpecialty: {
     ...typography.labelMedium,
@@ -425,58 +538,60 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.text.secondary,
     lineHeight: 18,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    minHeight: 36,
   },
   providerFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: spacing.sm,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border.light,
   },
   experienceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   experienceText: {
     ...typography.labelSmall,
     color: colors.text.secondary,
+    fontSize: 11,
   },
   availableBadge: {
     backgroundColor: '#D1FAE5',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
   },
   availableText: {
     ...typography.labelSmall,
     color: '#065F46',
     fontWeight: '600',
-  },
-  arrowButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
+    fontSize: 10,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xl * 2,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.xl,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
+    marginHorizontal: spacing.lg,
   },
   emptyIcon: {
-    width: 80,
-    height: 80,
+    width: 64,
+    height: 64,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.background.paper,
+    backgroundColor: colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   emptyTitle: {
-    ...typography.headlineSmall,
+    ...typography.titleLarge,
     color: colors.text.primary,
     fontWeight: '600',
     marginBottom: spacing.sm,
@@ -485,16 +600,52 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   emptyButton: {
     backgroundColor: colors.secondary[500],
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.lg,
-    ...shadows.small,
   },
   emptyButtonText: {
+    ...typography.labelMedium,
+    color: colors.neutral.white,
+    fontWeight: '600',
+  },
+  helpSection: {
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.xl,
+    borderWidth: 0.5,
+    borderColor: colors.border.light,
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  helpTitle: {
+    ...typography.titleLarge,
+    color: colors.text.primary,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  helpText: {
+    ...typography.bodyMedium,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  helpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.secondary[500],
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  helpButtonText: {
     ...typography.labelLarge,
     color: colors.neutral.white,
     fontWeight: '600',

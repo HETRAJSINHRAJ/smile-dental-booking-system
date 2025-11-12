@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, Smartphone, Building, Wallet } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/localization/currency';
 import { 
   usePayment, 
@@ -15,14 +13,6 @@ import {
 } from '@/lib/payment/usePayment';
 import { PaymentOrder } from '@/lib/payment/paymentGateway';
 import { paymentAuditService } from '@/lib/payment/paymentAudit';
-
-interface PaymentMethod {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  supported: boolean;
-}
 
 interface PaymentComponentProps {
   amount: number;
@@ -47,14 +37,13 @@ export function PaymentComponent({
   onError,
   onCancel
 }: PaymentComponentProps) {
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('upi');
   const [processing, setProcessing] = useState(false);
   const [appointmentId, setAppointmentId] = useState<string>('');
   
   const gatewayConfig = usePaymentGatewayConfig();
   const { processPayment, loading, error } = usePayment({
     ...gatewayConfig,
-    gateway: selectedPaymentMethod === 'cards' ? 'stripe' : 'razorpay'
+    gateway: 'razorpay'
   }, {
     onSuccess: async (paymentResponse) => {
       // Log successful payment
@@ -70,7 +59,6 @@ export function PaymentComponent({
           action: 'payment_success',
           amount: amountBreakdown.totalAmount,
           currency: 'INR',
-          paymentMethod: selectedPaymentMethod,
           transactionId: paymentResponse.paymentId || paymentResponse.orderId,
           gatewayResponse: paymentResponse
         });
@@ -91,7 +79,6 @@ export function PaymentComponent({
           action: 'payment_failed',
           amount: amountBreakdown.totalAmount,
           currency: 'INR',
-          paymentMethod: selectedPaymentMethod,
           errorMessage
         });
       }
@@ -110,8 +97,7 @@ export function PaymentComponent({
           paymentType: 'appointment_reservation',
           action: 'payment_cancelled',
           amount: amountBreakdown.totalAmount,
-          currency: 'INR',
-          paymentMethod: selectedPaymentMethod
+          currency: 'INR'
         });
       }
       onCancel();
@@ -120,37 +106,6 @@ export function PaymentComponent({
   
   const { calculateAmount } = usePaymentAmount();
   const { validatePaymentData } = usePaymentValidation();
-
-  const paymentMethods: PaymentMethod[] = [
-    {
-      id: 'upi',
-      name: 'UPI',
-      description: 'Google Pay, PhonePe, Paytm, BHIM UPI',
-      icon: <Smartphone className="w-5 h-5" />,
-      supported: true
-    },
-    {
-      id: 'cards',
-      name: 'Credit/Debit Cards',
-      description: 'Visa, Mastercard, RuPay',
-      icon: <CreditCard className="w-5 h-5" />,
-      supported: true
-    },
-    {
-      id: 'netbanking',
-      name: 'Net Banking',
-      description: 'All major Indian banks',
-      icon: <Building className="w-5 h-5" />,
-      supported: true
-    },
-    {
-      id: 'wallet',
-      name: 'Digital Wallets',
-      description: 'Paytm, PhonePe, Amazon Pay',
-      icon: <Wallet className="w-5 h-5" />,
-      supported: true
-    }
-  ];
 
   // Calculate amounts with GST
   const amountBreakdown = calculateAmount(amount, 0.18, 0);
@@ -168,7 +123,6 @@ export function PaymentComponent({
       receipt: generatedAppointmentId,
       notes: {
         service: serviceName,
-        payment_method: selectedPaymentMethod,
         payment_description: paymentDescription || 'Appointment booking payment',
         appointment_id: generatedAppointmentId
       },
@@ -186,8 +140,7 @@ export function PaymentComponent({
       paymentType: 'appointment_reservation',
       action: 'payment_initiated',
       amount: amountBreakdown.totalAmount,
-      currency: 'INR',
-      paymentMethod: selectedPaymentMethod
+      currency: 'INR'
     });
 
     // Validate payment data
@@ -229,43 +182,6 @@ export function PaymentComponent({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Method Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Choose Payment Method</CardTitle>
-          <CardDescription>Select your preferred payment option</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup 
-            value={selectedPaymentMethod} 
-            onValueChange={setSelectedPaymentMethod}
-            className="space-y-4"
-          >
-            {paymentMethods.map((method) => (
-              <div key={method.id} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                <RadioGroupItem value={method.id} id={method.id} disabled={!method.supported} />
-                <Label htmlFor={method.id} className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      {method.icon}
-                    </div>
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        {method.name}
-                        {!method.supported && (
-                          <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{method.description}</div>
-                    </div>
-                  </div>
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
         </CardContent>
       </Card>
 

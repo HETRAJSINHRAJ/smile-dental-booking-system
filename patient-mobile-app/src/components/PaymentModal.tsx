@@ -40,7 +40,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onError,
   onCancel,
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<string>('upi');
   const [processing, setProcessing] = useState(false);
 
   const razorpayConfig = {
@@ -66,33 +65,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const { validatePaymentData } = usePaymentValidation();
 
-  const paymentMethods = [
-    {
-      id: 'upi',
-      name: 'UPI',
-      description: 'Google Pay, PhonePe, Paytm, BHIM',
-      icon: 'phone-portrait-outline',
-    },
-    {
-      id: 'cards',
-      name: 'Credit/Debit Cards',
-      description: 'Visa, Mastercard, RuPay',
-      icon: 'card-outline',
-    },
-    {
-      id: 'netbanking',
-      name: 'Net Banking',
-      description: 'All major Indian banks',
-      icon: 'business-outline',
-    },
-    {
-      id: 'wallet',
-      name: 'Digital Wallets',
-      description: 'Paytm, PhonePe, Amazon Pay',
-      icon: 'wallet-outline',
-    },
-  ];
-
   const handlePayment = async () => {
     // Validate payment data
     const validation = validatePaymentData({
@@ -100,7 +72,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       currency: 'INR',
       notes: {
         service: serviceName,
-        payment_method: selectedMethod,
       },
       customerDetails,
     });
@@ -113,7 +84,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setProcessing(true);
 
     try {
-      console.log('Processing payment with method:', selectedMethod);
+      console.log('Processing payment via Razorpay');
       console.log('Amount:', amount, 'Paise:', convertRupeesToPaise(amount));
       
       await processPayment({
@@ -121,7 +92,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         currency: 'INR',
         notes: {
           service: serviceName,
-          payment_method: selectedMethod,
           payment_description: paymentDescription || 'Appointment booking payment',
         },
         customerDetails,
@@ -174,58 +144,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 <Text style={styles.summaryTotalLabel}>Total Payable</Text>
                 <Text style={styles.summaryTotalValue}>₹{amount.toFixed(2)}</Text>
               </View>
-            </View>
-          </Card>
-
-          {/* Payment Method Selection */}
-          <Card style={styles.methodsCard}>
-            <View style={styles.methodsHeader}>
-              <Text style={styles.methodsTitle}>Choose Payment Method</Text>
-            </View>
-
-            <View style={styles.methodsList}>
-              {paymentMethods.map((method) => (
-                <TouchableOpacity
-                  key={method.id}
-                  style={[
-                    styles.methodItem,
-                    selectedMethod === method.id && styles.methodItemSelected,
-                  ]}
-                  onPress={() => setSelectedMethod(method.id)}
-                  disabled={processing || loading}
-                >
-                  <View style={styles.methodIcon}>
-                    <Icon
-                      name={method.icon}
-                      size={24}
-                      color={selectedMethod === method.id ? colors.secondary[500] : colors.text.primary}
-                    />
-                  </View>
-
-                  <View style={styles.methodContent}>
-                    <Text
-                      style={[
-                        styles.methodName,
-                        selectedMethod === method.id && styles.methodNameSelected,
-                      ]}
-                    >
-                      {method.name}
-                    </Text>
-                    <Text style={styles.methodDescription}>{method.description}</Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.methodRadio,
-                      selectedMethod === method.id && styles.methodRadioSelected,
-                    ]}
-                  >
-                    {selectedMethod === method.id && (
-                      <View style={styles.methodRadioDot} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
             </View>
           </Card>
 
@@ -385,77 +303,6 @@ const styles = StyleSheet.create({
     ...typography.titleMedium,
     color: colors.secondary[500],
     fontWeight: '700',
-  },
-  methodsCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-  },
-  methodsHeader: {
-    marginBottom: spacing.md,
-  },
-  methodsTitle: {
-    ...typography.titleMedium,
-    color: colors.text.primary,
-    fontWeight: '600',
-  },
-  methodsList: {
-    gap: spacing.md,
-  },
-  methodItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background.default,
-    borderWidth: 2,
-    borderColor: colors.primary[100],
-  },
-  methodItemSelected: {
-    borderColor: colors.secondary[500],
-    backgroundColor: colors.secondary[50],
-  },
-  methodIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  methodContent: {
-    flex: 1,
-  },
-  methodName: {
-    ...typography.titleSmall,
-    color: colors.text.primary,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  methodNameSelected: {
-    color: colors.secondary[500],
-  },
-  methodDescription: {
-    ...typography.labelSmall,
-    color: colors.text.secondary,
-  },
-  methodRadio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.primary[100],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  methodRadioSelected: {
-    borderColor: colors.secondary[500],
-  },
-  methodRadioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.secondary[500],
   },
   securityCard: {
     marginBottom: spacing.lg,

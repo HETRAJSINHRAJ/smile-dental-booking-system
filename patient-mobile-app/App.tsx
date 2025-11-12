@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from './src/contexts/AuthContextWithToast';
 import { ToastProvider } from './src/contexts/ToastContext';
+import { AlertProvider } from './src/components/AlertProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/onboarding/SplashScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
@@ -69,12 +70,14 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-          <AppNavigator />
-        </AuthProvider>
-      </ToastProvider>
+      <AlertProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+            <AppNavigator />
+          </AuthProvider>
+        </ToastProvider>
+      </AlertProvider>
     </SafeAreaProvider>
   );
 }

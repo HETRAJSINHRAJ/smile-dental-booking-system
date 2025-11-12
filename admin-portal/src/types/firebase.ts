@@ -65,6 +65,10 @@ export interface Appointment {
   notes?: string;
   adminNotes?: string;
   confirmationNumber?: string;
+  receiptId?: string;
+  receiptUrl?: string; // Uploadcare URL for the receipt PDF
+  receiptGenerated?: boolean;
+  receiptGeneratedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

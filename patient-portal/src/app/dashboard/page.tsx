@@ -27,6 +27,7 @@ import type { UserProfile } from '@/types/firebase';
 import type { Appointment } from '@/types';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
+import { AppointmentsSection } from '@/components/dashboard/AppointmentsSection';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -799,83 +800,7 @@ export default function DashboardPage() {
 
         {/* Appointments Tab */}
         <TabsContent value="appointments" className="space-y-6">
-          {/* Upcoming Appointments */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Appointments</CardTitle>
-              <CardDescription>Your scheduled appointments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {upcomingAppointments.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No upcoming appointments</p>
-                  <Button 
-                    onClick={() => router.push('/booking')} 
-                    className="mt-4"
-                  >
-                    Book an Appointment
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {upcomingAppointments.map((apt) => (
-                    <div key={apt.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{apt.serviceName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          with {apt.providerName}
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {formatDate(apt.appointmentDate)} at {formatTime(apt.startTime)}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={getStatusColor(apt.status)}>
-                        {getStatusIcon(apt.status)}
-                        <span className="ml-1">{apt.status}</span>
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Past Appointments */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Past Appointments</CardTitle>
-              <CardDescription>Your appointment history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pastAppointments.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No past appointments</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {pastAppointments.map((apt) => (
-                    <div key={apt.id} className="flex items-center justify-between p-4 border rounded-lg opacity-75">
-                      <div className="flex-1">
-                        <div className="font-medium">{apt.serviceName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          with {apt.providerName}
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {formatDate(apt.appointmentDate)} at {formatTime(apt.startTime)}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={getStatusColor(apt.status)}>
-                        {getStatusIcon(apt.status)}
-                        <span className="ml-1">{apt.status}</span>
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <AppointmentsSection appointments={appointments} />
         </TabsContent>
       </Tabs>
     </div>

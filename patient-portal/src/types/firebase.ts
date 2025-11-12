@@ -58,12 +58,17 @@ export interface Appointment {
   serviceName: string;
   providerId: string;
   providerName: string;
+  providerImageUrl?: string;
   appointmentDate: Timestamp;
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   notes?: string;
   confirmationNumber?: string;
+  receiptId?: string;
+  receiptUrl?: string; // Uploadcare URL for the receipt PDF
+  receiptGenerated?: boolean;
+  receiptGeneratedAt?: Timestamp;
   
   // Payment fields for appointment reservation system
   paymentStatus: 'pending' | 'reservation_paid' | 'fully_paid' | 'refunded';

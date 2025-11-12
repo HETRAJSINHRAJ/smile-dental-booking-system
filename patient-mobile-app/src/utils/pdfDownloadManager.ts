@@ -1,4 +1,6 @@
-import { Platform, PermissionsAndroid, Alert, Share } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
+import { Alert } from './alert';
+import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import FileViewer from 'react-native-file-viewer';
 import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
@@ -183,7 +185,7 @@ export class PDFDownloadManager {
       });
     } catch (error: any) {
       console.error('Error opening PDF:', error);
-      Alert.alert(
+      Alert.warning(
         'Cannot Open File',
         'The file has been downloaded to your Downloads folder. Please install a PDF reader app or use a file manager to open it.',
         [{ text: 'OK' }]
@@ -202,20 +204,35 @@ export class PDFDownloadManager {
         throw new Error('File not found');
       }
 
-      await Share.share(
-        {
-          url: Platform.OS === 'ios' ? filePath : `file://${filePath}`,
-          title: fileName,
-          message: Platform.OS === 'android' ? `Sharing ${fileName}` : undefined,
-        },
-        {
-          dialogTitle: 'Share PDF',
-        }
-      );
+      // For Android, we need to use base64 or move file to cache directory
+      if (Platform.OS === 'android') {
+        // Read file as base64
+        const base64Data = await RNFS.readFile(filePath, 'base64');
+        
+        await Share.open({
+          url: `data:application/pdf;base64,${base64Data}`,
+          type: 'application/pdf',
+          title: 'Share Receipt',
+          subject: fileName,
+          filename: fileName,
+          failOnCancel: false,
+        });
+      } else {
+        // iOS can use file path directly
+        await Share.open({
+          url: filePath,
+          type: 'application/pdf',
+          title: 'Share Receipt',
+          subject: fileName,
+          filename: fileName,
+          failOnCancel: false,
+        });
+      }
     } catch (error: any) {
       console.error('Error sharing PDF:', error);
-      if (error.message !== 'User did not share') {
-        Alert.alert('Share Failed', 'Unable to share the file');
+      // Don't show error if user just cancelled
+      if (error.message && !error.message.includes('User did not share') && !error.message.includes('cancelled')) {
+        Alert.error('Share Failed', 'Unable to share the file');
       }
     }
   }
@@ -336,7 +353,7 @@ export class PDFDownloadManager {
       onComplete?.(finalPath);
 
       // Show success alert with file location
-      Alert.alert(
+      Alert.success(
         'Download Complete',
         `Receipt has been saved successfully!\n\nLocation: ${fileName}\n\nYou can open it now or find it later in your file manager under:\nAndroid/data/com.patient/files/Downloads`,
         [
@@ -357,7 +374,7 @@ export class PDFDownloadManager {
       await this.showErrorNotification(error.message || 'Failed to download PDF');
       onError?.(error);
 
-      Alert.alert(
+      Alert.error(
         'Download Failed',
         error.message || 'An error occurred while downloading the receipt',
         [{ text: 'OK' }]

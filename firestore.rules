@@ -178,5 +178,23 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && 
                        resource.data.userId == request.auth.uid;
     }
+    
+    // Receipts collection
+    match /receipts/{receiptId} {
+      // Users can read their own receipts, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // System can create receipts (when appointments are confirmed)
+      // Users can create receipts for their own appointments
+      allow create: if isAuthenticated() && 
+                       (request.resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Only admins can update receipts (for corrections or refunds)
+      allow update: if isAdmin();
+      
+      // Only admins can delete receipts
+      allow delete: if isAdmin();
+    }
   }
 }
