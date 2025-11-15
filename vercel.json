@@ -1,8 +1,0 @@
-{
-  "buildCommand": "cd admin-portal && npm install && npm run build",
-  "outputDirectory": "admin-portal/.next",
-  "installCommand": "cd admin-portal && npm install",
-  "devCommand": "cd admin-portal && npm run dev",
-  "framework": null,
-  "regions": ["bom1"]
-}

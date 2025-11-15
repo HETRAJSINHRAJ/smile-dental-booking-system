@@ -196,5 +196,52 @@ service cloud.firestore {
       // Only admins can delete receipts
       allow delete: if isAdmin();
     }
+    
+    // FCM Tokens Collection (for push notifications)
+    match /fcmTokens/{tokenId} {
+      // Users can only read/write their own tokens
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Admins can read all tokens (for monitoring)
+      allow read: if isAdmin();
+    }
+    
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Only server can create notifications (via Admin SDK)
+      // This prevents users from creating fake notifications
+      allow create: if false;
+      
+      // Users can update their own notifications (mark as read)
+      // Only allow updating 'read' and 'readAt' fields
+      allow update: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+      
+      // Users cannot delete notifications (for audit trail)
+      allow delete: if false;
+      
+      // Admins can read all notifications
+      allow read: if isAdmin();
+      
+      // Admins can delete notifications (for cleanup)
+      allow delete: if isAdmin();
+    }
+    
+    // Notification Preferences Collection
+    match /notificationPreferences/{userId} {
+      // Users can only read/write their own preferences
+      allow read: if isAuthenticated() && userId == request.auth.uid;
+      allow write: if isAuthenticated() && userId == request.auth.uid;
+      
+      // Admins can read all preferences
+      allow read: if isAdmin();
+    }
   }
 }
