@@ -639,7 +639,7 @@ const AppointmentsScreen: React.FC = () => {
       >
         <View style={styles.sectionIndicator}>
           <View style={[styles.sectionDot, { backgroundColor: section.color }]} />
-          <Text style={styles.sectionTitle}>
+          <Text style={styles.sectionHeaderTitle}>
             {section.title} ({section.originalData.length})
           </Text>
         </View>
@@ -792,9 +792,8 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginTop: 1,
   },
-  sectionTitle: {
+  sectionHeaderTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,

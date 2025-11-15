@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { useToast } from './ToastContext';
+import notificationService from '../services/notificationService';
 
 interface UserProfile {
   id: string;
@@ -64,6 +65,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(user);
       if (user) {
         await fetchUserProfile(user.uid);
+        // Initialize notifications when user logs in
+        try {
+          await notificationService.initialize(user.uid);
+          console.log('✅ Notifications initialized for user:', user.uid);
+        } catch (error) {
+          console.error('❌ Failed to initialize notifications:', error);
+        }
       } else {
         setUserProfile(null);
       }
@@ -135,6 +143,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
+      // Delete FCM token before signing out
+      if (user) {
+        try {
+          await notificationService.deleteFCMToken(user.uid);
+          console.log('✅ FCM token deleted for user:', user.uid);
+        } catch (error) {
+          console.error('❌ Failed to delete FCM token:', error);
+        }
+      }
+      
       await auth().signOut();
       setUserProfile(null);
       toast.showSuccess('Signed out successfully 👋');

@@ -35,6 +35,7 @@ import { Timestamp } from 'firebase/firestore';
 import TodayAppointments from '@/components/appointments/TodayAppointments';
 import CreateAppointmentDialog from '@/components/appointments/CreateAppointmentDialog';
 import { ReceiptManager } from '@/components/receipts/ReceiptManager';
+import { useNotificationSender } from '@/hooks/useNotificationSender';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
@@ -65,6 +66,7 @@ export default function AppointmentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const { sendAppointmentConfirmation, sendAppointmentCancellation } = useNotificationSender();
 
   useEffect(() => {
     fetchAppointments();
@@ -134,13 +136,51 @@ export default function AppointmentsPage() {
       setUpdating(true);
       await updateAppointment(appointmentId, { status: newStatus });
 
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+
       setAppointments(prev =>
         prev.map(apt =>
           apt.id === appointmentId ? { ...apt, status: newStatus } : apt
         )
       );
 
-      toast.success(`Appointment ${newStatus} successfully`);
+      // Send notification based on status change
+      if (appointment) {
+        const appointmentDate = appointment.appointmentDate instanceof Timestamp 
+          ? appointment.appointmentDate.toDate() 
+          : appointment.appointmentDate;
+        
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+
+        if (newStatus === 'confirmed') {
+          // Send confirmation notification
+          await sendAppointmentConfirmation(appointment.userId, {
+            serviceName: appointment.serviceName,
+            providerName: appointment.providerName,
+            date: formattedDate,
+            time: appointment.startTime,
+            appointmentId: appointment.id,
+          });
+          toast.success('Appointment confirmed and notification sent! 🔔');
+        } else if (newStatus === 'cancelled') {
+          // Send cancellation notification
+          await sendAppointmentCancellation(appointment.userId, {
+            serviceName: appointment.serviceName,
+            providerName: appointment.providerName,
+            date: formattedDate,
+            time: appointment.startTime,
+            appointmentId: appointment.id,
+          });
+          toast.success('Appointment cancelled and notification sent! 🔔');
+        } else {
+          toast.success(`Appointment ${newStatus} successfully`);
+        }
+      }
+
       setDialogOpen(false);
     } catch (error) {
       console.error('Error updating appointment:', error);
