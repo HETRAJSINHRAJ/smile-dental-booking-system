@@ -1,0 +1,95 @@
+{
+  "title": "सूचनाएं",
+  "subtitle": "अपने अपॉइंटमेंट और संदेशों के साथ अपडेट रहें",
+  "tabs": {
+    "all": "सभी",
+    "unread": "अपठित",
+    "appointments": "अपॉइंटमेंट",
+    "payments": "भुगतान",
+    "general": "सामान्य"
+  },
+  "types": {
+    "appointmentConfirmed": "अपॉइंटमेंट की पुष्टि",
+    "appointmentReminder": "अपॉइंटमेंट रिमाइंडर",
+    "appointmentCancelled": "अपॉइंटमेंट रद्द",
+    "appointmentRescheduled": "अपॉइंटमेंट पुनर्निर्धारित",
+    "paymentReceived": "भुगतान प्राप्त",
+    "paymentFailed": "भुगतान विफल",
+    "refundProcessed": "रिफंड प्रोसेस किया गया",
+    "reviewRequest": "समीक्षा अनुरोध",
+    "promotional": "प्रचार",
+    "systemUpdate": "सिस्टम अपडेट"
+  },
+  "actions": {
+    "markAsRead": "पढ़ा हुआ चिह्नित करें",
+    "markAsUnread": "अपठित चिह्नित करें",
+    "markAllAsRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "delete": "हटाएं",
+    "deleteAll": "सभी हटाएं",
+    "viewDetails": "विवरण देखें"
+  },
+  "preferences": {
+    "title": "सूचना प्राथमिकताएं",
+    "subtitle": "प्रबंधित करें कि आप सूचनाएं कैसे प्राप्त करते हैं",
+    "channels": {
+      "title": "सूचना चैनल",
+      "email": "ईमेल",
+      "sms": "एसएमएस",
+      "push": "पुश सूचनाएं"
+    },
+    "types": {
+      "title": "सूचना प्रकार",
+      "appointmentReminders": "अपॉइंटमेंट रिमाइंडर",
+      "appointmentUpdates": "अपॉइंटमेंट अपडेट",
+      "paymentUpdates": "भुगतान अपडेट",
+      "promotional": "प्रचार ऑफर",
+      "general": "सामान्य अपडेट"
+    },
+    "quietHours": {
+      "title": "शांत घंटे",
+      "subtitle": "इन घंटों के दौरान सूचनाएं न भेजें",
+      "enabled": "शांत घंटे सक्षम करें",
+      "start": "प्रारंभ समय",
+      "end": "समाप्ति समय",
+      "timezone": "समय क्षेत्र"
+    },
+    "savePreferences": "प्राथमिकताएं सहेजें",
+    "success": "प्राथमिकताएं सफलतापूर्वक सहेजी गईं",
+    "failed": "प्राथमिकताएं सहेजने में विफल"
+  },
+  "messages": {
+    "appointmentConfirmed": "{{date}} को {{time}} बजे आपके अपॉइंटमेंट की पुष्टि हो गई है",
+    "appointmentReminder": "रिमाइंडर: कल {{time}} बजे आपका अपॉइंटमेंट है",
+    "appointmentCancelled": "{{date}} को आपका अपॉइंटमेंट रद्द कर दिया गया है",
+    "appointmentRescheduled": "आपका अपॉइंटमेंट {{date}} को {{time}} बजे पुनर्निर्धारित किया गया है",
+    "paymentReceived": "{{amount}} का भुगतान सफलतापूर्वक प्राप्त हुआ",
+    "paymentFailed": "{{amount}} का भुगतान विफल रहा। कृपया पुनः प्रयास करें",
+    "refundProcessed": "{{amount}} का रिफंड प्रोसेस किया गया है",
+    "reviewRequest": "आपका अपॉइंटमेंट कैसा रहा? कृपया एक समीक्षा दें"
+  },
+  "empty": {
+    "noNotifications": "कोई सूचना नहीं",
+    "noUnread": "कोई अपठित सूचना नहीं",
+    "allCaughtUp": "आप सभी अपडेट हैं!"
+  },
+  "settings": {
+    "title": "सूचना सेटिंग्स",
+    "emailNotifications": "ईमेल सूचनाएं",
+    "smsNotifications": "एसएमएस सूचनाएं",
+    "pushNotifications": "पुश सूचनाएं",
+    "soundEnabled": "ध्वनि",
+    "vibrationEnabled": "कंपन",
+    "doNotDisturb": "परेशान न करें",
+    "badge": "बैज काउंट",
+    "preview": "पूर्वावलोकन दिखाएं",
+    "grouping": "सूचनाओं को समूहित करें"
+  },
+  "permission": {
+    "title": "सूचनाएं सक्षम करें",
+    "message": "अपॉइंटमेंट रिमाइंडर और महत्वपूर्ण अपडेट के साथ अपडेट रहें",
+    "enable": "सूचनाएं सक्षम करें",
+    "later": "शायद बाद में",
+    "denied": "सूचना अनुमति अस्वीकृत। कृपया इसे सेटिंग्स में सक्षम करें।",
+    "openSettings": "सेटिंग्स खोलें"
+  }
+}

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getAllDocuments } from '@/lib/firebase/firestore';
-import type { UserProfile, Appointment } from '@/types/firebase';
+import type { UserProfile, Appointment } from '@/types/shared';
 import { toast } from 'sonner';
 
 interface PatientAnalytics {

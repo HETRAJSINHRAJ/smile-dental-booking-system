@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAllDocuments } from '../../lib/firestore';
@@ -18,6 +17,8 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { Card } from '../../components/Card';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { useMountedRef } from '../../hooks/usePerformance';
 
 type SelectProviderScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -40,47 +41,118 @@ const SPECIALTIES = [
   { id: 'Pediatric Dentistry', name: 'Pediatric' },
 ];
 
+// Memoized Provider Card component
+const ProviderCard = memo<{
+  provider: Provider;
+  onPress: (provider: Provider) => void;
+}>(({ provider, onPress }) => (
+  <TouchableOpacity
+    style={styles.providerCard}
+    onPress={() => onPress(provider)}
+    activeOpacity={0.7}
+  >
+    {/* Provider Photo */}
+    <View style={styles.providerImageContainer}>
+      <OptimizedImage
+        uri={provider.imageUrl}
+        style={styles.providerImage}
+        fallbackIcon="person"
+        fallbackIconSize={48}
+        fallbackIconColor={colors.secondary[500]}
+      />
+      
+      {/* Rating Badge */}
+      {provider.rating && (
+        <View style={styles.ratingBadge}>
+          <Icon name="star" size={12} color="#FCD34D" />
+          <Text style={styles.ratingText}>{provider.rating.toFixed(1)}</Text>
+        </View>
+      )}
+    </View>
+
+    {/* Provider Details */}
+    <View style={styles.providerDetails}>
+      <Text style={styles.providerName} numberOfLines={1}>
+        {provider.name}
+      </Text>
+      <Text style={styles.providerSpecialty} numberOfLines={1}>
+        {provider.specialty}
+      </Text>
+      
+      <Text style={styles.providerBio} numberOfLines={2}>
+        {provider.bio}
+      </Text>
+
+      <View style={styles.providerFooter}>
+        <View style={styles.experienceContainer}>
+          <Icon name="time-outline" size={14} color={colors.text.secondary} />
+          <Text style={styles.experienceText}>
+            {provider.yearsOfExperience}y exp
+          </Text>
+        </View>
+        
+        {provider.acceptingNewPatients && (
+          <View style={styles.availableBadge}>
+            <Text style={styles.availableText}>Available</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  </TouchableOpacity>
+));
+
+ProviderCard.displayName = 'ProviderCard';
+
 const SelectProviderScreen: React.FC<Props> = ({ navigation, route }) => {
   const { serviceId } = route.params;
   const [providers, setProviders] = useState<Provider[]>([]);
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterSpecialty, setFilterSpecialty] = useState('all');
+  const isMounted = useMountedRef();
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [providersData, servicesData] = await Promise.all([
         getAllDocuments<Provider>('providers', []),
         getAllDocuments<Service>('services', []),
       ]);
       
-      const selectedService = servicesData.find(s => s.id === serviceId);
-      setService(selectedService || null);
-      setProviders(providersData);
+      if (isMounted.current) {
+        const selectedService = servicesData.find(s => s.id === serviceId);
+        setService(selectedService || null);
+        setProviders(providersData);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [serviceId, isMounted]);
 
-  const handleProviderSelect = (provider: Provider) => {
+  const handleProviderSelect = useCallback((provider: Provider) => {
     navigation.navigate('SelectDateTime', {
       serviceId,
       providerId: provider.id,
     });
-  };
+  }, [navigation, serviceId]);
 
-  const filteredProviders = providers.filter((provider) => {
-    const offersService = provider.serviceIds && provider.serviceIds.includes(serviceId);
-    if (!offersService) return false;
-    
-    return filterSpecialty === 'all' || provider.specialty === filterSpecialty;
-  });
+  // Memoize filtered providers to prevent recalculation on every render
+  const filteredProviders = useMemo(() => {
+    return providers.filter((provider) => {
+      const offersService = provider.serviceIds && provider.serviceIds.includes(serviceId);
+      if (!offersService) return false;
+      
+      return filterSpecialty === 'all' || provider.specialty === filterSpecialty;
+    });
+  }, [providers, serviceId, filterSpecialty]);
 
 
   const renderEmptyState = () => (
@@ -213,64 +285,11 @@ const SelectProviderScreen: React.FC<Props> = ({ navigation, route }) => {
         {filteredProviders.length > 0 ? (
           <View style={styles.providersGrid}>
             {filteredProviders.map((provider) => (
-              <TouchableOpacity
+              <ProviderCard
                 key={provider.id}
-                style={styles.providerCard}
-                onPress={() => handleProviderSelect(provider)}
-                activeOpacity={0.7}
-              >
-                {/* Provider Photo */}
-                <View style={styles.providerImageContainer}>
-                  {provider.imageUrl ? (
-                    <Image
-                      source={{ uri: provider.imageUrl }}
-                      style={styles.providerImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.providerImagePlaceholder}>
-                      <Icon name="person" size={48} color={colors.secondary[500]} />
-                    </View>
-                  )}
-                  
-                  {/* Rating Badge */}
-                  {provider.rating && (
-                    <View style={styles.ratingBadge}>
-                      <Icon name="star" size={12} color="#FCD34D" />
-                      <Text style={styles.ratingText}>{provider.rating.toFixed(1)}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Provider Details */}
-                <View style={styles.providerDetails}>
-                  <Text style={styles.providerName} numberOfLines={1}>
-                    {provider.name}
-                  </Text>
-                  <Text style={styles.providerSpecialty} numberOfLines={1}>
-                    {provider.specialty}
-                  </Text>
-                  
-                  <Text style={styles.providerBio} numberOfLines={2}>
-                    {provider.bio}
-                  </Text>
-
-                  <View style={styles.providerFooter}>
-                    <View style={styles.experienceContainer}>
-                      <Icon name="time-outline" size={14} color={colors.text.secondary} />
-                      <Text style={styles.experienceText}>
-                        {provider.yearsOfExperience}y exp
-                      </Text>
-                    </View>
-                    
-                    {provider.acceptingNewPatients && (
-                      <View style={styles.availableBadge}>
-                        <Text style={styles.availableText}>Available</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
+                provider={provider}
+                onPress={handleProviderSelect}
+              />
             ))}
           </View>
         ) : (
@@ -493,12 +512,6 @@ const styles = StyleSheet.create({
   providerImage: {
     width: '100%',
     height: '100%',
-  },
-  providerImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: colors.primary[50],
   },
   ratingBadge: {

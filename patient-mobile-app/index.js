@@ -7,6 +7,10 @@ import messaging from '@react-native-firebase/messaging';
 import notifee from '@notifee/react-native';
 import App from './App';
 import { name as appName } from './app.json';
+import { markAppStart } from './src/lib/performanceMonitoring';
+
+// Mark app start time as early as possible for performance tracking
+markAppStart();
 
 // Register background handler for FCM
 messaging().setBackgroundMessageHandler(async remoteMessage => {

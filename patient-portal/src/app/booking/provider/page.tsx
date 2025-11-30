@@ -12,8 +12,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { getProviders } from "@/lib/firebase/firestore";
-import { Provider } from "@/types/firebase";
+import { Provider } from "@/types/shared";
 import { useCurrency } from "@/lib/localization/useCurrency";
+import { analyticsService } from "@/lib/analytics/analyticsService";
 
 // Force dynamic rendering to prevent prerendering
 export const dynamic = "force-dynamic";
@@ -58,6 +59,9 @@ function SelectProviderContent() {
   };
 
   const handleProviderSelect = (provider: Provider) => {
+    // Track provider view
+    analyticsService.trackProviderView(provider.id, provider.name, service?.id);
+    
     const params = new URLSearchParams(searchParams.toString());
     params.set("providerId", provider.id);
     params.set("providerName", provider.name);

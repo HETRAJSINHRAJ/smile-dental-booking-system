@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { getServices } from "@/lib/firebase/firestore";
 import {
   Sparkles,
   Clock,
@@ -16,7 +15,8 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/lib/localization/useCurrency";
 import Link from "next/link";
-import { Service } from "@/types/firebase";
+import { Service } from "@/types/shared";
+import { analyticsService } from "@/lib/analytics/analyticsService";
 
 // Icon mapping based on category
 const getCategoryIcon = (category: string): string => {
@@ -38,24 +38,19 @@ export default function ServicesPage() {
   const { formatCurrency } = useCurrency();
 
   useEffect(() => {
-    // Set up real-time listener for services
-    const servicesRef = collection(db, "services");
-
-    const unsubscribe = onSnapshot(
-      servicesRef,
-      (snapshot) => {
-        if (snapshot.empty) {
+    // Fetch services using cached one-time read (5-minute TTL)
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        const servicesData = await getServices();
+        
+        if (servicesData.length === 0) {
           console.log("No services found in Firestore");
           setServices([]);
           setError(
             "No services available at the moment. Please check back later.",
           );
         } else {
-          const servicesData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as Service[];
-
           // Sort by category and name
           const sortedServices = servicesData.sort((a, b) => {
             if (a.category === b.category) {
@@ -67,17 +62,15 @@ export default function ServicesPage() {
           setServices(sortedServices);
           setError(null);
         }
-        setLoading(false);
-      },
-      (err) => {
+      } catch (err) {
         console.error("Error fetching services:", err);
         setError("Unable to load services. Please try again later.");
+      } finally {
         setLoading(false);
-      },
-    );
+      }
+    };
 
-    // Cleanup listener on unmount
-    return () => unsubscribe();
+    fetchServices();
   }, []);
 
   const categories = [
@@ -117,6 +110,15 @@ export default function ServicesPage() {
     selectedCategory === "all"
       ? services
       : services.filter((service) => service.category === selectedCategory);
+
+  // Track service views when services are displayed
+  useEffect(() => {
+    if (filteredServices.length > 0) {
+      filteredServices.forEach((service) => {
+        analyticsService.trackServiceView(service.id, service.name);
+      });
+    }
+  }, [filteredServices]);
 
   if (loading) {
     return (

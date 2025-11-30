@@ -8,10 +8,13 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
+import { CredentialResponse } from '@react-oauth/google';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle, signInWithFacebook } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -21,6 +24,8 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToPrivacyPolicy, setAgreedToPrivacyPolicy] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +43,56 @@ export default function SignupPage() {
       return;
     }
 
+    // Validate consent checkboxes
+    if (!agreedToPrivacyPolicy) {
+      setError('You must agree to the Privacy Policy to create an account');
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms of Service to create an account');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await signUp(email, password, name, phone);
+      await signUp(email, password, name, phone, 'patient', {
+        privacyPolicy: agreedToPrivacyPolicy,
+        termsOfService: agreedToTerms,
+      });
       router.push("/");
     } catch (err: any) {
       console.error('Signup error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (!credentialResponse.credential) {
+      console.error('No credential received from Google');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signInWithGoogle(credentialResponse.credential);
+      router.push("/");
+    } catch (err: any) {
+      console.error('Google signup error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFacebookClick = async () => {
+    setLoading(true);
+    try {
+      await signInWithFacebook();
+      router.push("/");
+    } catch (err: any) {
+      console.error('Facebook signup error:', err);
     } finally {
       setLoading(false);
     }
@@ -67,6 +115,25 @@ export default function SignupPage() {
               {error}
             </div>
           )}
+
+          {/* Social Login Buttons */}
+          <div className="mb-6">
+            <SocialLoginButtons
+              onGoogleSuccess={handleGoogleSuccess}
+              onFacebookClick={handleFacebookClick}
+              disabled={loading}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-background text-muted-foreground">Or sign up with email</span>
+            </div>
+          </div>
 
           {/* Signup Form */}
           <form onSubmit={handleSignup} className="space-y-5">
@@ -170,6 +237,61 @@ export default function SignupPage() {
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
+              </div>
+            </div>
+
+            {/* Consent Checkboxes */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="privacyPolicy"
+                  checked={agreedToPrivacyPolicy}
+                  onCheckedChange={(checked) => setAgreedToPrivacyPolicy(checked === true)}
+                  required
+                  className="mt-1"
+                />
+                <label
+                  htmlFor="privacyPolicy"
+                  className="text-sm leading-relaxed cursor-pointer"
+                >
+                  I agree to the{' '}
+                  <Link
+                    href="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Privacy Policy
+                  </Link>
+                  <span className="text-destructive ml-1">*</span>
+                </label>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="termsOfService"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  required
+                  className="mt-1"
+                />
+                <label
+                  htmlFor="termsOfService"
+                  className="text-sm leading-relaxed cursor-pointer"
+                >
+                  I agree to the{' '}
+                  <Link
+                    href="/terms-of-service"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Terms of Service
+                  </Link>
+                  <span className="text-destructive ml-1">*</span>
+                </label>
               </div>
             </div>
 

@@ -12,10 +12,43 @@ import {
   Timestamp,
   WhereFilterOp,
   QueryConstraint,
-  limit as firestoreLimit
+  limit as firestoreLimit,
+  startAfter,
+  endBefore,
+  limitToLast,
+  DocumentSnapshot,
+  QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from './config';
-import type { Service, Provider, ProviderSchedule, Appointment, ContactInquiry } from '@/types/firebase';
+import type { Service, Provider, ProviderSchedule, Appointment, ContactInquiry } from '@/types/shared';
+import {
+  firebaseCache,
+  CACHE_KEYS,
+  getCachedProviders,
+  setCachedProviders,
+  getCachedServices,
+  setCachedServices,
+  invalidateProviderCache,
+  invalidateServiceCache
+} from './cache';
+
+// Pagination types
+export interface PaginatedResult<T> {
+  items: T[];
+  hasMore: boolean;
+  hasPrevious: boolean;
+  firstDoc: DocumentSnapshot | null;
+  lastDoc: DocumentSnapshot | null;
+  total?: number;
+}
+
+export interface PaginationOptions {
+  pageSize?: number;
+  startAfterDoc?: DocumentSnapshot | null;
+  endBeforeDoc?: DocumentSnapshot | null;
+}
+
+const DEFAULT_PAGE_SIZE = 20;
 
 // Generic Firestore operations
 export async function getDocument<T>(collectionName: string, docId: string): Promise<T | null> {
@@ -94,25 +127,118 @@ export async function deleteDocument(collectionName: string, docId: string): Pro
   }
 }
 
-// Service-specific operations
-export const getServices = () => getAllDocuments<Service>('services', [orderBy('name', 'asc')]);
-export const getService = (id: string) => getDocument<Service>('services', id);
-export const createService = (data: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>) => 
-  createDocument<Service>('services', data);
-export const updateService = (id: string, data: Partial<Service>) => 
-  updateDocument<Service>('services', id, data);
-export const deleteService = (id: string) => deleteDocument('services', id);
+// Service-specific operations with caching
+export const getServices = async (): Promise<Service[]> => {
+  // Check cache first
+  const cached = getCachedServices<Service[]>();
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const services = await getAllDocuments<Service>('services', [orderBy('name', 'asc')]);
+  
+  // Cache the result
+  setCachedServices(services);
+  
+  return services;
+};
 
-// Provider-specific operations
-export const getProviders = () => getAllDocuments<Provider>('providers', [orderBy('name', 'asc')]);
-export const getProvider = (id: string) => getDocument<Provider>('providers', id);
+export const getService = async (id: string): Promise<Service | null> => {
+  // Check cache first
+  const cacheKey = CACHE_KEYS.SERVICE(id);
+  const cached = firebaseCache.get<Service>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const service = await getDocument<Service>('services', id);
+  
+  // Cache the result if found
+  if (service) {
+    firebaseCache.set(cacheKey, service);
+  }
+  
+  return service;
+};
+
+export const createService = async (data: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const id = await createDocument<Service>('services', data);
+  // Invalidate services cache
+  invalidateServiceCache();
+  return id;
+};
+
+export const updateService = async (id: string, data: Partial<Service>): Promise<void> => {
+  await updateDocument<Service>('services', id, data);
+  // Invalidate services cache
+  invalidateServiceCache();
+};
+
+export const deleteService = async (id: string): Promise<void> => {
+  await deleteDocument('services', id);
+  // Invalidate services cache
+  invalidateServiceCache();
+};
+
+// Provider-specific operations with caching
+export const getProviders = async (): Promise<Provider[]> => {
+  // Check cache first
+  const cached = getCachedProviders<Provider[]>();
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const providers = await getAllDocuments<Provider>('providers', [orderBy('name', 'asc')]);
+  
+  // Cache the result
+  setCachedProviders(providers);
+  
+  return providers;
+};
+
+export const getProvider = async (id: string): Promise<Provider | null> => {
+  // Check cache first
+  const cacheKey = CACHE_KEYS.PROVIDER(id);
+  const cached = firebaseCache.get<Provider>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const provider = await getDocument<Provider>('providers', id);
+  
+  // Cache the result if found
+  if (provider) {
+    firebaseCache.set(cacheKey, provider);
+  }
+  
+  return provider;
+};
+
 export const getProvidersByService = (serviceId: string) => 
   getAllDocuments<Provider>('providers', [where('serviceIds', 'array-contains', serviceId)]);
-export const createProvider = (data: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>) => 
-  createDocument<Provider>('providers', data);
-export const updateProvider = (id: string, data: Partial<Provider>) => 
-  updateDocument<Provider>('providers', id, data);
-export const deleteProvider = (id: string) => deleteDocument('providers', id);
+
+export const createProvider = async (data: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const id = await createDocument<Provider>('providers', data);
+  // Invalidate providers cache
+  invalidateProviderCache();
+  return id;
+};
+
+export const updateProvider = async (id: string, data: Partial<Provider>): Promise<void> => {
+  await updateDocument<Provider>('providers', id, data);
+  // Invalidate providers cache
+  invalidateProviderCache();
+};
+
+export const deleteProvider = async (id: string): Promise<void> => {
+  await deleteDocument('providers', id);
+  // Invalidate providers cache
+  invalidateProviderCache();
+};
 
 // Provider Schedule operations
 export const getProviderSchedule = (providerId: string) => 
@@ -133,6 +259,97 @@ export const getAppointments = (userId?: string) => {
     constraints.unshift(where('userId', '==', userId));
   }
   return getAllDocuments<Appointment>('appointments', constraints);
+};
+
+/**
+ * Get paginated appointments with cursor-based pagination
+ * Uses startAfter/endBefore for efficient Firestore pagination
+ */
+export const getAppointmentsPaginated = async (
+  options: PaginationOptions & {
+    userId?: string;
+    status?: string;
+  } = {}
+): Promise<PaginatedResult<Appointment>> => {
+  const { 
+    pageSize = DEFAULT_PAGE_SIZE, 
+    startAfterDoc, 
+    endBeforeDoc,
+    userId,
+    status 
+  } = options;
+
+  try {
+    const collectionRef = collection(db, 'appointments');
+    const constraints: QueryConstraint[] = [];
+
+    // Add filters
+    if (userId) {
+      constraints.push(where('userId', '==', userId));
+    }
+    if (status && status !== 'all') {
+      constraints.push(where('status', '==', status));
+    }
+
+    // Add ordering
+    constraints.push(orderBy('appointmentDate', 'desc'));
+
+    // Add pagination
+    if (startAfterDoc) {
+      constraints.push(startAfter(startAfterDoc));
+      constraints.push(firestoreLimit(pageSize + 1)); // +1 to check if there are more
+    } else if (endBeforeDoc) {
+      constraints.push(endBefore(endBeforeDoc));
+      constraints.push(limitToLast(pageSize + 1)); // +1 to check if there are previous
+    } else {
+      constraints.push(firestoreLimit(pageSize + 1)); // +1 to check if there are more
+    }
+
+    const q = query(collectionRef, ...constraints);
+    const snapshot = await getDocs(q);
+
+    const docs = snapshot.docs;
+    let items: Appointment[];
+    let hasMore = false;
+    let hasPrevious = false;
+
+    if (startAfterDoc) {
+      // Forward pagination
+      hasMore = docs.length > pageSize;
+      hasPrevious = true;
+      items = docs.slice(0, pageSize).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Appointment[];
+    } else if (endBeforeDoc) {
+      // Backward pagination
+      hasPrevious = docs.length > pageSize;
+      hasMore = true;
+      items = docs.slice(hasPrevious ? 1 : 0).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Appointment[];
+    } else {
+      // Initial load
+      hasMore = docs.length > pageSize;
+      hasPrevious = false;
+      items = docs.slice(0, pageSize).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Appointment[];
+    }
+
+    return {
+      items,
+      hasMore,
+      hasPrevious,
+      firstDoc: docs.length > 0 ? docs[0] : null,
+      lastDoc: docs.length > 0 ? docs[Math.min(docs.length - 1, pageSize - 1)] : null,
+    };
+  } catch (error) {
+    console.error('Error fetching paginated appointments:', error);
+    throw error;
+  }
 };
 
 export const getAppointment = (id: string) => getDocument<Appointment>('appointments', id);
@@ -267,3 +484,180 @@ export async function getAvailableTimeSlots(
   
   return slots;
 }
+
+// User/Patient operations with pagination
+import type { UserProfile, AuditLog } from '@/types/shared';
+
+/**
+ * Get paginated users/patients with cursor-based pagination
+ */
+export const getUsersPaginated = async (
+  options: PaginationOptions = {}
+): Promise<PaginatedResult<UserProfile>> => {
+  const { 
+    pageSize = DEFAULT_PAGE_SIZE, 
+    startAfterDoc, 
+    endBeforeDoc 
+  } = options;
+
+  try {
+    const collectionRef = collection(db, 'users');
+    const constraints: QueryConstraint[] = [];
+
+    // Add ordering by creation date (most recent first)
+    constraints.push(orderBy('createdAt', 'desc'));
+
+    // Add pagination
+    if (startAfterDoc) {
+      constraints.push(startAfter(startAfterDoc));
+      constraints.push(firestoreLimit(pageSize + 1));
+    } else if (endBeforeDoc) {
+      constraints.push(endBefore(endBeforeDoc));
+      constraints.push(limitToLast(pageSize + 1));
+    } else {
+      constraints.push(firestoreLimit(pageSize + 1));
+    }
+
+    const q = query(collectionRef, ...constraints);
+    const snapshot = await getDocs(q);
+
+    const docs = snapshot.docs;
+    let items: UserProfile[];
+    let hasMore = false;
+    let hasPrevious = false;
+
+    if (startAfterDoc) {
+      hasMore = docs.length > pageSize;
+      hasPrevious = true;
+      items = docs.slice(0, pageSize).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserProfile[];
+    } else if (endBeforeDoc) {
+      hasPrevious = docs.length > pageSize;
+      hasMore = true;
+      items = docs.slice(hasPrevious ? 1 : 0).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserProfile[];
+    } else {
+      hasMore = docs.length > pageSize;
+      hasPrevious = false;
+      items = docs.slice(0, pageSize).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserProfile[];
+    }
+
+    return {
+      items,
+      hasMore,
+      hasPrevious,
+      firstDoc: docs.length > 0 ? docs[0] : null,
+      lastDoc: docs.length > 0 ? docs[Math.min(docs.length - 1, pageSize - 1)] : null,
+    };
+  } catch (error) {
+    console.error('Error fetching paginated users:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get paginated audit logs with cursor-based pagination
+ */
+export const getAuditLogsPaginated = async (
+  options: PaginationOptions & {
+    userId?: string;
+    action?: string;
+    resource?: string;
+  } = {}
+): Promise<PaginatedResult<AuditLog>> => {
+  const { 
+    pageSize = DEFAULT_PAGE_SIZE, 
+    startAfterDoc, 
+    endBeforeDoc,
+    userId,
+    action,
+    resource
+  } = options;
+
+  try {
+    const collectionRef = collection(db, 'auditLogs');
+    const constraints: QueryConstraint[] = [];
+
+    // Add filters - Note: Firestore requires indexes for compound queries
+    if (userId) {
+      constraints.push(where('userId', '==', userId));
+    }
+    if (action && action !== 'all') {
+      constraints.push(where('action', '==', action));
+    }
+    if (resource && resource !== 'all') {
+      constraints.push(where('resource', '==', resource));
+    }
+
+    // Add ordering
+    constraints.push(orderBy('timestamp', 'desc'));
+
+    // Add pagination
+    if (startAfterDoc) {
+      constraints.push(startAfter(startAfterDoc));
+      constraints.push(firestoreLimit(pageSize + 1));
+    } else if (endBeforeDoc) {
+      constraints.push(endBefore(endBeforeDoc));
+      constraints.push(limitToLast(pageSize + 1));
+    } else {
+      constraints.push(firestoreLimit(pageSize + 1));
+    }
+
+    const q = query(collectionRef, ...constraints);
+    const snapshot = await getDocs(q);
+
+    const docs = snapshot.docs;
+    let items: AuditLog[];
+    let hasMore = false;
+    let hasPrevious = false;
+
+    if (startAfterDoc) {
+      hasMore = docs.length > pageSize;
+      hasPrevious = true;
+      items = docs.slice(0, pageSize).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AuditLog[];
+    } else if (endBeforeDoc) {
+      hasPrevious = docs.length > pageSize;
+      hasMore = true;
+      items = docs.slice(hasPrevious ? 1 : 0).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AuditLog[];
+    } else {
+      hasMore = docs.length > pageSize;
+      hasPrevious = false;
+      items = docs.slice(0, pageSize).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AuditLog[];
+    }
+
+    return {
+      items,
+      hasMore,
+      hasPrevious,
+      firstDoc: docs.length > 0 ? docs[0] : null,
+      lastDoc: docs.length > 0 ? docs[Math.min(docs.length - 1, pageSize - 1)] : null,
+    };
+  } catch (error) {
+    console.error('Error fetching paginated audit logs:', error);
+    throw error;
+  }
+};
+
+// Export cache utilities for manual cache management
+export { 
+  firebaseCache, 
+  invalidateProviderCache, 
+  invalidateServiceCache,
+  invalidateAllCache 
+} from './cache';

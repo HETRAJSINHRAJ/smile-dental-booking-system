@@ -10,6 +10,9 @@ import AdminHeader from "@/components/layout/AdminHeader";
 import { AdminGuard } from "@/components/layout/AdminGuard";
 import { usePathname } from "next/navigation";
 import Head from "next/head";
+import { useEffect } from "react";
+import { reportWebVitals } from "@/lib/performance/webVitals";
+import { observeLongTasks } from "@/lib/performance/sentryTransactions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,6 +68,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Initialize web vitals and performance monitoring on mount
+  useEffect(() => {
+    reportWebVitals();
+    
+    // Start observing long tasks for performance monitoring
+    const cleanup = observeLongTasks();
+    
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <Head>

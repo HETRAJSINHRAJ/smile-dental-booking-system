@@ -21,6 +21,7 @@ import {
 import QuickCreatePatientButton from "@/components/patients/QuickCreatePatientButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import {
   Table,
   TableBody,
@@ -40,7 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getAllDocuments, getDocument } from "@/lib/firebase/firestore";
-import type { Appointment, UserProfile } from "@/types/firebase";
+import type { Appointment, UserProfile } from "@/types/shared";
 import { toast } from "sonner";
 import { Timestamp } from "firebase/firestore";
 
@@ -64,6 +65,11 @@ export default function PatientsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameSearch, setNameSearch] = useState("");
+  const [emailSearch, setEmailSearch] = useState("");
+  const [phoneSearch, setPhoneSearch] = useState("");
+  const [registrationStartDate, setRegistrationStartDate] = useState("");
+  const [registrationEndDate, setRegistrationEndDate] = useState("");
   const [selectedPatient, setSelectedPatient] =
     useState<PatientWithAppointments | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,7 +80,7 @@ export default function PatientsPage() {
 
   useEffect(() => {
     filterPatients();
-  }, [patients, searchTerm]);
+  }, [patients, searchTerm, nameSearch, emailSearch, phoneSearch, registrationStartDate, registrationEndDate]);
 
   const fetchPatients = async () => {
     try {
@@ -166,20 +172,74 @@ export default function PatientsPage() {
   };
 
   const filterPatients = () => {
-    if (!searchTerm) {
-      setFilteredPatients(patients);
-      return;
+    let filtered = [...patients];
+
+    // General search term (searches across all fields)
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (patient) =>
+          (patient.userName && patient.userName.toLowerCase().includes(term)) ||
+          (patient.userEmail && patient.userEmail.toLowerCase().includes(term)) ||
+          (patient.userPhone && patient.userPhone.toLowerCase().includes(term)) ||
+          (patient.profile?.fullName &&
+            patient.profile.fullName.toLowerCase().includes(term)),
+      );
     }
 
-    const term = searchTerm.toLowerCase();
-    const filtered = patients.filter(
-      (patient) =>
-        (patient.userName && patient.userName.toLowerCase().includes(term)) ||
-        (patient.userEmail && patient.userEmail.toLowerCase().includes(term)) ||
-        (patient.userPhone && patient.userPhone.toLowerCase().includes(term)) ||
-        (patient.profile?.fullName &&
-          patient.profile.fullName.toLowerCase().includes(term)),
-    );
+    // Name search
+    if (nameSearch) {
+      const term = nameSearch.toLowerCase();
+      filtered = filtered.filter(
+        (patient) =>
+          (patient.userName && patient.userName.toLowerCase().includes(term)) ||
+          (patient.profile?.fullName &&
+            patient.profile.fullName.toLowerCase().includes(term)),
+      );
+    }
+
+    // Email search
+    if (emailSearch) {
+      const term = emailSearch.toLowerCase();
+      filtered = filtered.filter(
+        (patient) =>
+          patient.userEmail && patient.userEmail.toLowerCase().includes(term),
+      );
+    }
+
+    // Phone search
+    if (phoneSearch) {
+      const term = phoneSearch.replace(/\D/g, ''); // Remove non-digits
+      filtered = filtered.filter(
+        (patient) =>
+          patient.userPhone && patient.userPhone.replace(/\D/g, '').includes(term),
+      );
+    }
+
+    // Registration date range filter
+    if (registrationStartDate) {
+      const start = new Date(registrationStartDate);
+      start.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((patient) => {
+        if (!patient.profile?.createdAt) return false;
+        const regDate = patient.profile.createdAt instanceof Timestamp
+          ? patient.profile.createdAt.toDate()
+          : patient.profile.createdAt;
+        return regDate >= start;
+      });
+    }
+
+    if (registrationEndDate) {
+      const end = new Date(registrationEndDate);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((patient) => {
+        if (!patient.profile?.createdAt) return false;
+        const regDate = patient.profile.createdAt instanceof Timestamp
+          ? patient.profile.createdAt.toDate()
+          : patient.profile.createdAt;
+        return regDate <= end;
+      });
+    }
 
     setFilteredPatients(filtered);
   };
@@ -202,6 +262,42 @@ export default function PatientsPage() {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  // Generate autocomplete suggestions for quick search
+  const getAutocompleteSuggestions = () => {
+    const suggestions = new Set<string>();
+    
+    patients.forEach(patient => {
+      if (patient.userName) suggestions.add(patient.userName);
+      if (patient.userEmail) suggestions.add(patient.userEmail);
+      if (patient.userPhone) suggestions.add(patient.userPhone);
+      if (patient.profile?.fullName) suggestions.add(patient.profile.fullName);
+    });
+    
+    return Array.from(suggestions).sort();
+  };
+
+  // Generate name suggestions
+  const getNameSuggestions = () => {
+    const suggestions = new Set<string>();
+    
+    patients.forEach(patient => {
+      if (patient.userName) suggestions.add(patient.userName);
+      if (patient.profile?.fullName) suggestions.add(patient.profile.fullName);
+    });
+    
+    return Array.from(suggestions).sort();
+  };
+
+  // Generate email suggestions
+  const getEmailSuggestions = () => {
+    return Array.from(new Set(patients.map(p => p.userEmail).filter(Boolean))).sort();
+  };
+
+  // Generate phone suggestions
+  const getPhoneSuggestions = () => {
+    return Array.from(new Set(patients.map(p => p.userPhone).filter(Boolean))).sort();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -219,14 +315,82 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, email, or phone..."
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        <AutocompleteInput
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          onChange={setSearchTerm}
+          suggestions={getAutocompleteSuggestions()}
+          placeholder="Quick search by name, email, or phone..."
+          icon={<Search className="h-4 w-4 text-muted-foreground" />}
         />
+
+        {/* Advanced Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Name</label>
+            <AutocompleteInput
+              value={nameSearch}
+              onChange={setNameSearch}
+              suggestions={getNameSuggestions()}
+              placeholder="Search by name"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Email</label>
+            <AutocompleteInput
+              value={emailSearch}
+              onChange={setEmailSearch}
+              suggestions={getEmailSuggestions()}
+              placeholder="Search by email"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Phone</label>
+            <AutocompleteInput
+              value={phoneSearch}
+              onChange={setPhoneSearch}
+              suggestions={getPhoneSuggestions()}
+              placeholder="Search by phone"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Registration From</label>
+            <Input
+              type="date"
+              value={registrationStartDate}
+              onChange={(e) => setRegistrationStartDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Registration To</label>
+            <Input
+              type="date"
+              value={registrationEndDate}
+              onChange={(e) => setRegistrationEndDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Clear Filters Button */}
+        {(searchTerm || nameSearch || emailSearch || phoneSearch || registrationStartDate || registrationEndDate) && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setNameSearch("");
+                setEmailSearch("");
+                setPhoneSearch("");
+                setRegistrationStartDate("");
+                setRegistrationEndDate("");
+              }}
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        )}
       </div>
 
       {loading ? (

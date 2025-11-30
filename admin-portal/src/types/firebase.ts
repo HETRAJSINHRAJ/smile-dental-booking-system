@@ -93,6 +93,38 @@ export interface BookingData {
   notes?: string;
 }
 
+export interface NotificationPreferences {
+  userId: string;
+  email: {
+    enabled: boolean;
+    appointmentReminders: boolean;
+    appointmentUpdates: boolean;
+    paymentUpdates: boolean;
+    promotional: boolean;
+  };
+  sms: {
+    enabled: boolean;
+    appointmentReminders: boolean;
+    appointmentUpdates: boolean;
+    paymentUpdates: boolean;
+  };
+  push: {
+    enabled: boolean;
+    appointmentReminders: boolean;
+    appointmentUpdates: boolean;
+    paymentUpdates: boolean;
+    promotional: boolean;
+  };
+  quietHours: {
+    enabled: boolean;
+    start: string; // HH:mm format (e.g., "22:00")
+    end: string; // HH:mm format (e.g., "08:00")
+    timezone: string;
+  };
+  language: 'en' | 'hi';
+  updatedAt: Timestamp;
+}
+
 export interface UserProfile {
   id: string;
   uid: string;
@@ -124,6 +156,7 @@ export interface UserProfile {
     notes: string;
   };
   avatarUrl?: string;
+  preferences?: NotificationPreferences;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

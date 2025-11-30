@@ -1,0 +1,106 @@
+{
+  "title": "Book an Appointment",
+  "steps": {
+    "selectService": "Select Service",
+    "selectProvider": "Select Provider",
+    "selectDateTime": "Select Date & Time",
+    "patientDetails": "Patient Details",
+    "confirmation": "Confirmation"
+  },
+  "service": {
+    "title": "Choose a Service",
+    "subtitle": "Select the dental service you need",
+    "duration": "Duration",
+    "price": "Price",
+    "description": "Description",
+    "noServices": "No services available at the moment",
+    "searchPlaceholder": "Search services..."
+  },
+  "provider": {
+    "title": "Choose a Provider",
+    "subtitle": "Select your preferred dentist",
+    "experience": "{{years}} years of experience",
+    "rating": "Rating",
+    "reviews": "{{count}} reviews",
+    "specialization": "Specialization",
+    "availability": "Availability",
+    "noProviders": "No providers available for this service",
+    "viewProfile": "View Profile",
+    "searchPlaceholder": "Search providers..."
+  },
+  "dateTime": {
+    "title": "Select Date & Time",
+    "subtitle": "Choose your preferred appointment slot",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "noSlots": "No available slots for this date",
+    "fullyBooked": "This slot is fully booked",
+    "slotUnavailable": "This slot is unavailable",
+    "availableSlots": "Available Slots"
+  },
+  "patientDetails": {
+    "title": "Patient Information",
+    "subtitle": "Please provide your details",
+    "existingPatient": "Existing Patient",
+    "newPatient": "New Patient",
+    "emergencyContact": "Emergency Contact",
+    "medicalHistory": "Medical History",
+    "allergies": "Allergies",
+    "medications": "Current Medications",
+    "specialInstructions": "Special Instructions"
+  },
+  "confirmation": {
+    "title": "Confirm Your Appointment",
+    "subtitle": "Please review your appointment details",
+    "appointmentDetails": "Appointment Details",
+    "service": "Service",
+    "provider": "Provider",
+    "dateTime": "Date & Time",
+    "patient": "Patient",
+    "reservationFee": "Reservation Fee",
+    "serviceFee": "Service Fee (Payable at clinic)",
+    "totalAmount": "Total Amount",
+    "paymentMethod": "Payment Method",
+    "termsAndConditions": "I agree to the terms and conditions",
+    "cancellationPolicy": "Cancellation Policy",
+    "proceedToPayment": "Proceed to Payment",
+    "confirmBooking": "Confirm Booking"
+  },
+  "success": {
+    "title": "Booking Successful!",
+    "subtitle": "Your appointment has been confirmed",
+    "confirmationNumber": "Confirmation Number",
+    "emailSent": "A confirmation email has been sent to {{email}}",
+    "whatNext": "What's Next?",
+    "step1": "You will receive a reminder 24 hours before your appointment",
+    "step2": "Please arrive 10 minutes early for check-in",
+    "step3": "Bring any relevant medical records or insurance information",
+    "viewAppointment": "View Appointment",
+    "bookAnother": "Book Another Appointment",
+    "downloadReceipt": "Download Receipt",
+    "shareReceipt": "Share Receipt",
+    "addToCalendar": "Add to Calendar"
+  },
+  "payment": {
+    "title": "Payment",
+    "processing": "Processing payment...",
+    "failed": "Payment failed. Please try again",
+    "success": "Payment successful",
+    "cardDetails": "Card Details",
+    "upi": "UPI",
+    "netBanking": "Net Banking",
+    "wallet": "Wallet",
+    "payNow": "Pay Now"
+  },
+  "validation": {
+    "selectService": "Please select a service",
+    "selectProvider": "Please select a provider",
+    "selectDate": "Please select a date",
+    "selectTime": "Please select a time slot",
+    "fillAllFields": "Please fill all required fields",
+    "acceptTerms": "Please accept the terms and conditions"
+  }
+}

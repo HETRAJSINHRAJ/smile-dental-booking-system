@@ -1,0 +1,101 @@
+{
+  "title": "अपॉइंटमेंट बुक करें",
+  "steps": {
+    "selectService": "सेवा चुनें",
+    "selectProvider": "डॉक्टर चुनें",
+    "selectDateTime": "तारीख और समय चुनें",
+    "patientDetails": "मरीज का विवरण",
+    "confirmation": "पुष्टि"
+  },
+  "service": {
+    "title": "एक सेवा चुनें",
+    "subtitle": "अपनी आवश्यक दंत सेवा चुनें",
+    "duration": "अवधि",
+    "price": "मूल्य",
+    "description": "विवरण",
+    "noServices": "इस समय कोई सेवा उपलब्ध नहीं है"
+  },
+  "provider": {
+    "title": "एक डॉक्टर चुनें",
+    "subtitle": "अपने पसंदीदा दंत चिकित्सक को चुनें",
+    "experience": "{{years}} वर्षों का अनुभव",
+    "rating": "रेटिंग",
+    "reviews": "{{count}} समीक्षाएं",
+    "specialization": "विशेषज्ञता",
+    "availability": "उपलब्धता",
+    "noProviders": "इस सेवा के लिए कोई डॉक्टर उपलब्ध नहीं है",
+    "viewProfile": "प्रोफ़ाइल देखें"
+  },
+  "dateTime": {
+    "title": "तारीख और समय चुनें",
+    "subtitle": "अपना पसंदीदा अपॉइंटमेंट स्लॉट चुनें",
+    "selectDate": "तारीख चुनें",
+    "selectTime": "समय चुनें",
+    "morning": "सुबह",
+    "afternoon": "दोपहर",
+    "evening": "शाम",
+    "noSlots": "इस तारीख के लिए कोई स्लॉट उपलब्ध नहीं है",
+    "fullyBooked": "यह स्लॉट पूरी तरह से बुक है",
+    "slotUnavailable": "यह स्लॉट उपलब्ध नहीं है"
+  },
+  "patientDetails": {
+    "title": "मरीज की जानकारी",
+    "subtitle": "कृपया अपना विवरण प्रदान करें",
+    "existingPatient": "मौजूदा मरीज",
+    "newPatient": "नया मरीज",
+    "emergencyContact": "आपातकालीन संपर्क",
+    "medicalHistory": "चिकित्सा इतिहास",
+    "allergies": "एलर्जी",
+    "medications": "वर्तमान दवाएं",
+    "specialInstructions": "विशेष निर्देश"
+  },
+  "confirmation": {
+    "title": "अपने अपॉइंटमेंट की पुष्टि करें",
+    "subtitle": "कृपया अपने अपॉइंटमेंट विवरण की समीक्षा करें",
+    "appointmentDetails": "अपॉइंटमेंट विवरण",
+    "service": "सेवा",
+    "provider": "डॉक्टर",
+    "dateTime": "तारीख और समय",
+    "patient": "मरीज",
+    "reservationFee": "आरक्षण शुल्क",
+    "serviceFee": "सेवा शुल्क (क्लिनिक में देय)",
+    "totalAmount": "कुल राशि",
+    "paymentMethod": "भुगतान विधि",
+    "termsAndConditions": "मैं नियम और शर्तों से सहमत हूं",
+    "cancellationPolicy": "रद्दीकरण नीति",
+    "proceedToPayment": "भुगतान के लिए आगे बढ़ें",
+    "confirmBooking": "बुकिंग की पुष्टि करें"
+  },
+  "success": {
+    "title": "बुकिंग सफल!",
+    "subtitle": "आपके अपॉइंटमेंट की पुष्टि हो गई है",
+    "confirmationNumber": "पुष्टि संख्या",
+    "emailSent": "{{email}} पर एक पुष्टि ईमेल भेजा गया है",
+    "whatNext": "आगे क्या?",
+    "step1": "आपको अपने अपॉइंटमेंट से 24 घंटे पहले एक रिमाइंडर प्राप्त होगा",
+    "step2": "कृपया चेक-इन के लिए 10 मिनट पहले पहुंचें",
+    "step3": "कोई भी प्रासंगिक चिकित्सा रिकॉर्ड या बीमा जानकारी लाएं",
+    "viewAppointment": "अपॉइंटमेंट देखें",
+    "bookAnother": "एक और अपॉइंटमेंट बुक करें",
+    "downloadReceipt": "रसीद डाउनलोड करें",
+    "addToCalendar": "कैलेंडर में जोड़ें"
+  },
+  "payment": {
+    "title": "भुगतान",
+    "processing": "भुगतान प्रोसेस हो रहा है...",
+    "failed": "भुगतान विफल। कृपया पुनः प्रयास करें",
+    "success": "भुगतान सफल",
+    "cardDetails": "कार्ड विवरण",
+    "upi": "यूपीआई",
+    "netBanking": "नेट बैंकिंग",
+    "wallet": "वॉलेट"
+  },
+  "validation": {
+    "selectService": "कृपया एक सेवा चुनें",
+    "selectProvider": "कृपया एक डॉक्टर चुनें",
+    "selectDate": "कृपया एक तारीख चुनें",
+    "selectTime": "कृपया एक समय स्लॉट चुनें",
+    "fillAllFields": "कृपया सभी आवश्यक फ़ील्ड भरें",
+    "acceptTerms": "कृपया नियम और शर्तों को स्वीकार करें"
+  }
+}

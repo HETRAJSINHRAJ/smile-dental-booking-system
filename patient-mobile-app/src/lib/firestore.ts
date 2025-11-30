@@ -228,3 +228,172 @@ export async function getAvailableTimeSlots(
     throw error;
   }
 }
+
+// Import cache utilities
+import {
+  firebaseCache,
+  CACHE_KEYS,
+  getCachedProviders,
+  setCachedProviders,
+  getCachedServices,
+  setCachedServices,
+  invalidateProviderCache,
+  invalidateServiceCache,
+  invalidateAllCache,
+} from './cache';
+
+// Types for services and providers
+interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  duration: number;
+  price: number;
+  imageUrl?: string;
+  isActive?: boolean;
+  createdAt?: FirebaseFirestoreTypes.Timestamp;
+  updatedAt?: FirebaseFirestoreTypes.Timestamp;
+}
+
+interface Provider {
+  id: string;
+  name: string;
+  specialty?: string;
+  bio?: string;
+  imageUrl?: string;
+  serviceIds?: string[];
+  averageRating?: number;
+  totalReviews?: number;
+  isActive?: boolean;
+  createdAt?: FirebaseFirestoreTypes.Timestamp;
+  updatedAt?: FirebaseFirestoreTypes.Timestamp;
+}
+
+/**
+ * Get all services with caching (5-minute TTL)
+ */
+export async function getServices(): Promise<Service[]> {
+  // Check cache first
+  const cached = getCachedServices<Service[]>();
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from Firestore
+  const snapshot = await firestore()
+    .collection('services')
+    .orderBy('name', 'asc')
+    .get();
+
+  const services = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Service[];
+
+  // Cache the result
+  setCachedServices(services);
+
+  return services;
+}
+
+/**
+ * Get a single service by ID with caching
+ */
+export async function getService(id: string): Promise<Service | null> {
+  // Check cache first
+  const cacheKey = CACHE_KEYS.SERVICE(id);
+  const cached = firebaseCache.get<Service>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from Firestore
+  const doc = await firestore().collection('services').doc(id).get();
+  
+  if (!doc.exists) {
+    return null;
+  }
+
+  const service = { id: doc.id, ...doc.data() } as Service;
+
+  // Cache the result
+  firebaseCache.set(cacheKey, service);
+
+  return service;
+}
+
+/**
+ * Get all providers with caching (5-minute TTL)
+ */
+export async function getProviders(): Promise<Provider[]> {
+  // Check cache first
+  const cached = getCachedProviders<Provider[]>();
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from Firestore
+  const snapshot = await firestore()
+    .collection('providers')
+    .orderBy('name', 'asc')
+    .get();
+
+  const providers = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Provider[];
+
+  // Cache the result
+  setCachedProviders(providers);
+
+  return providers;
+}
+
+/**
+ * Get a single provider by ID with caching
+ */
+export async function getProvider(id: string): Promise<Provider | null> {
+  // Check cache first
+  const cacheKey = CACHE_KEYS.PROVIDER(id);
+  const cached = firebaseCache.get<Provider>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from Firestore
+  const doc = await firestore().collection('providers').doc(id).get();
+  
+  if (!doc.exists) {
+    return null;
+  }
+
+  const provider = { id: doc.id, ...doc.data() } as Provider;
+
+  // Cache the result
+  firebaseCache.set(cacheKey, provider);
+
+  return provider;
+}
+
+/**
+ * Get providers by service ID
+ */
+export async function getProvidersByService(serviceId: string): Promise<Provider[]> {
+  const snapshot = await firestore()
+    .collection('providers')
+    .where('serviceIds', 'array-contains', serviceId)
+    .get();
+
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Provider[];
+}
+
+// Export cache utilities for manual cache management
+export {
+  firebaseCache,
+  invalidateProviderCache,
+  invalidateServiceCache,
+  invalidateAllCache,
+};

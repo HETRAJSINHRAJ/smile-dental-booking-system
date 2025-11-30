@@ -7,10 +7,12 @@ import Link from 'next/link';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
+import { CredentialResponse } from '@react-oauth/google';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle, signInWithFacebook } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +32,35 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (!credentialResponse.credential) {
+      console.error('No credential received from Google');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signInWithGoogle(credentialResponse.credential);
+      router.push("/");
+    } catch (err: any) {
+      console.error('Google login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFacebookClick = async () => {
+    setLoading(true);
+    try {
+      await signInWithFacebook();
+      router.push("/");
+    } catch (err: any) {
+      console.error('Facebook login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-blue-50 dark:from-background dark:via-background dark:to-muted flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
@@ -42,6 +73,25 @@ export default function LoginPage() {
 
         {/* Form Card */}
         <Card className="p-8 border-2">
+          {/* Social Login Buttons */}
+          <div className="mb-6">
+            <SocialLoginButtons
+              onGoogleSuccess={handleGoogleSuccess}
+              onFacebookClick={handleFacebookClick}
+              disabled={loading}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-background text-muted-foreground">Or continue with email</span>
+            </div>
+          </div>
+
           {/* Email/Password Form */}
           <form onSubmit={handleEmailLogin} className="space-y-5">
             {/* Email */}

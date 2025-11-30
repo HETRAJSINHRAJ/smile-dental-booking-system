@@ -14,6 +14,9 @@ import ServicesScreen from '../screens/main/ServicesScreen';
 import BookingScreen from '../screens/booking/BookingScreen';
 import AppointmentsScreen from '../screens/appointments/AppointmentsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import NotificationPreferencesScreen from '../screens/profile/NotificationPreferencesScreen';
+import LinkedAccountsScreen from '../screens/profile/LinkedAccountsScreen';
 
 // Booking Flow Screens
 import SelectServiceScreen from '../screens/booking/SelectServiceScreen';
@@ -22,8 +25,12 @@ import SelectDateTimeScreen from '../screens/booking/SelectDateTimeScreen';
 import ConfirmBookingScreen from '../screens/booking/ConfirmBookingScreen';
 import BookingSuccessScreen from '../screens/booking/BookingSuccessScreen';
 
+// Appointment Screens
+import RescheduleScreen from '../screens/appointments/RescheduleScreen';
+
 import { useAuth } from '../contexts/AuthContextWithToast';
 import { TabBar } from '../components/TabBar';
+import { Appointment } from '../types/shared';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -36,6 +43,10 @@ export type RootStackParamList = {
   SelectDateTime: { serviceId: string; providerId: string };
   ConfirmBooking: { serviceId: string; providerId: string; date: string; time: string };
   BookingSuccess: { appointmentId: string };
+  Reschedule: { appointment: Appointment };
+  EditProfile: undefined;
+  NotificationPreferences: undefined;
+  LinkedAccounts: undefined;
 };
 
 export type MainTabParamList = {
@@ -90,6 +101,10 @@ const AppNavigator = () => {
             <Stack.Screen name="SelectDateTime" component={SelectDateTimeScreen} />
             <Stack.Screen name="ConfirmBooking" component={ConfirmBookingScreen} />
             <Stack.Screen name="BookingSuccess" component={BookingSuccessScreen} />
+            <Stack.Screen name="Reschedule" component={RescheduleScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+            <Stack.Screen name="LinkedAccounts" component={LinkedAccountsScreen} />
           </>
         ) : (
           <Stack.Screen name="Auth" component={AuthStack} />

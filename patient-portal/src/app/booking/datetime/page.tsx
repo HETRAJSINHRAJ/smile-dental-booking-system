@@ -8,7 +8,7 @@ import {
   getProvider,
   getAvailableTimeSlots,
 } from "@/lib/firebase/firestore";
-import type { Service, Provider } from "@/types/firebase";
+import type { Service, Provider } from "@/types/shared";
 import {
   Loader2,
   ArrowLeft,
@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrency } from "@/lib/localization/useCurrency";
+import { analyticsService } from "@/lib/analytics/analyticsService";
+import { JoinWaitlistDialog } from "@/components/waitlist/JoinWaitlistDialog";
 
 function SelectDateTimeContent() {
   const router = useRouter();
@@ -36,6 +38,8 @@ function SelectDateTimeContent() {
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [allTimeSlots, setAllTimeSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [showWaitlistDialog, setShowWaitlistDialog] = useState(false);
+  const [waitlistSlot, setWaitlistSlot] = useState<string>("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -142,8 +146,14 @@ function SelectDateTimeContent() {
     setSelectedTime("");
   };
 
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
+  const handleTimeSelect = (time: string, isAvailable: boolean) => {
+    if (isAvailable) {
+      setSelectedTime(time);
+    } else {
+      // Show waitlist dialog for unavailable slots
+      setWaitlistSlot(time);
+      setShowWaitlistDialog(true);
+    }
   };
 
   const handleContinue = () => {
@@ -151,6 +161,9 @@ function SelectDateTimeContent() {
       toast.error("Please select both date and time");
       return;
     }
+
+    // Track booking date selected event
+    analyticsService.trackBookingDateSelected(serviceId!, providerId!, selectedDate);
 
     router.push(
       `/booking/confirm?serviceId=${serviceId}&providerId=${providerId}&date=${selectedDate}&time=${selectedTime}`,
@@ -389,15 +402,15 @@ function SelectDateTimeContent() {
                     return (
                       <button
                         key={slot}
-                        onClick={() => isAvailable && handleTimeSelect(slot)}
-                        disabled={!isAvailable}
+                        onClick={() => handleTimeSelect(slot, isAvailable)}
                         className={`p-3 rounded-lg border text-sm font-medium transition-all ${
                           isSelected
                             ? "border-primary bg-primary/10 text-primary"
                             : isAvailable
                               ? "border-border hover:border-primary/50 hover:bg-muted/50"
-                              : "border-muted-foreground/30 bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                              : "border-muted-foreground/30 bg-muted/50 text-muted-foreground hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 cursor-pointer"
                         }`}
+                        title={!isAvailable ? "Click to join waitlist" : ""}
                       >
                         {formatTimeTo12Hour(slot)}
                       </button>
@@ -426,6 +439,24 @@ function SelectDateTimeContent() {
           </button>
         </div>
       </div>
+
+      {/* Waitlist Dialog */}
+      {showWaitlistDialog && service && provider && selectedDate && waitlistSlot && (
+        <JoinWaitlistDialog
+          isOpen={showWaitlistDialog}
+          onClose={() => {
+            setShowWaitlistDialog(false);
+            setWaitlistSlot("");
+          }}
+          service={service}
+          provider={provider}
+          selectedDate={new Date(selectedDate)}
+          selectedTime={waitlistSlot}
+          onSuccess={() => {
+            toast.success("Successfully joined waitlist!");
+          }}
+        />
+      )}
     </div>
   );
 }

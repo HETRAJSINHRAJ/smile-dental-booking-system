@@ -1,0 +1,137 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "config": {
+      "adminWhitelist": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    
+    "conversations": {
+      ".read": "auth != null",
+      ".indexOn": ["patientId", "status", "updatedAt"],
+      
+      "$conversationId": {
+        ".write": "auth != null",
+        
+        ".validate": "newData.hasChildren(['id', 'patientId', 'patientName', 'patientEmail', 'status', 'createdAt', 'updatedAt'])",
+        
+        "id": {
+          ".validate": "newData.isString()"
+        },
+        "patientId": {
+          ".validate": "newData.isString()"
+        },
+        "patientName": {
+          ".validate": "newData.isString()"
+        },
+        "patientEmail": {
+          ".validate": "newData.isString()"
+        },
+        "status": {
+          ".validate": "newData.val() === 'active' || newData.val() === 'archived'"
+        },
+        "lastMessage": {
+          ".validate": "newData.isString()"
+        },
+        "lastMessageTimestamp": {
+          ".validate": "newData.isNumber()"
+        },
+        "unreadCount": {
+          ".validate": "newData.isNumber()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    
+    "messages": {
+      "$conversationId": {
+        ".indexOn": ["timestamp"],
+        
+        ".read": "auth != null",
+        
+        "$messageId": {
+          ".write": "auth != null",
+          
+          ".validate": "newData.hasChildren(['id', 'conversationId', 'senderId', 'senderName', 'senderRole', 'message', 'type', 'timestamp', 'read'])",
+          
+          "id": {
+            ".validate": "newData.isString()"
+          },
+          "conversationId": {
+            ".validate": "newData.isString() && newData.val() === $conversationId"
+          },
+          "senderId": {
+            ".validate": "newData.isString()"
+          },
+          "senderName": {
+            ".validate": "newData.isString()"
+          },
+          "senderRole": {
+            ".validate": "newData.val() === 'patient' || newData.val() === 'admin'"
+          },
+          "message": {
+            ".validate": "newData.isString()"
+          },
+          "type": {
+            ".validate": "newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'document'"
+          },
+          "fileUrl": {
+            ".validate": "newData.isString()"
+          },
+          "fileName": {
+            ".validate": "newData.isString()"
+          },
+          "fileSize": {
+            ".validate": "newData.isNumber()"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          },
+          "read": {
+            ".validate": "newData.isBoolean()"
+          },
+          "readAt": {
+            ".validate": "newData.isNumber()"
+          }
+        }
+      }
+    },
+    
+    "typing": {
+      "$conversationId": {
+        ".read": "auth != null",
+        
+        "$userId": {
+          ".write": "auth != null",
+          
+          ".validate": "newData.val() === null || newData.hasChildren(['conversationId', 'userId', 'userName', 'isTyping', 'timestamp'])",
+          
+          "conversationId": {
+            ".validate": "newData.isString() && newData.val() === $conversationId"
+          },
+          "userId": {
+            ".validate": "newData.isString() && newData.val() === $userId"
+          },
+          "userName": {
+            ".validate": "newData.isString()"
+          },
+          "isTyping": {
+            ".validate": "newData.isBoolean()"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          }
+        }
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAllDocuments, updateAppointment } from '@/lib/firebase/firestore';
-import type { Appointment } from '@/types/firebase';
+import type { Appointment } from '@/types/shared';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 

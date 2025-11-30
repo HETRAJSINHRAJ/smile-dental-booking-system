@@ -8,3 +8,11 @@ export type { ToastType } from './Toast';
 export { CustomAlert } from './CustomAlert';
 export type { AlertButton } from './CustomAlert';
 export { AlertProvider } from './AlertProvider';
+export { ReceiptViewer } from './ReceiptViewer';
+export { PaymentReceiptView } from './PaymentReceiptView';
+
+// Performance optimized components
+export { OptimizedImage, FastImage } from './OptimizedImage';
+export type { OptimizedImageProps } from './OptimizedImage';
+export { ProviderListItem, ServiceListItem, DoctorCardItem } from './OptimizedListItems';
+export { LazyScreen, ScreenLoadingFallback, ScreenErrorFallback, withLazyLoading, createDeferredScreen } from './LazyScreen';

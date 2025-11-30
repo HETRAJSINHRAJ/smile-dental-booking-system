@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import notificationService from '@/lib/notifications/notificationService';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/ratelimit';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, title, body: messageBody, type, data, appointmentId } = body;
+
+    // Apply rate limiting (10 requests per hour per user)
+    const rateLimitIdentifier = userId || 'anonymous';
+    const { allowed, response, result } = await rateLimitMiddleware(
+      request,
+      'notifications',
+      rateLimitIdentifier
+    );
+    
+    if (!allowed && response) {
+      return response;
+    }
 
     if (!userId || !title || !messageBody || !type) {
       return NextResponse.json(
@@ -23,7 +36,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (success) {
-      return NextResponse.json({ success: true, message: 'Notification sent successfully' });
+      const successResponse = NextResponse.json({ success: true, message: 'Notification sent successfully' });
+      addRateLimitHeaders(successResponse, result);
+      return successResponse;
     } else {
       return NextResponse.json(
         { error: 'Failed to send notification' },

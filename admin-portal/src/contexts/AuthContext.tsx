@@ -21,6 +21,14 @@ interface UserProfile {
   role: 'patient' | 'admin';
   phoneNumber?: string;
   dateOfBirth?: string;
+  preferences?: {
+    language?: string;
+    notifications?: {
+      email?: boolean;
+      sms?: boolean;
+      push?: boolean;
+    };
+  };
   createdAt: any;
   updatedAt: any;
 }

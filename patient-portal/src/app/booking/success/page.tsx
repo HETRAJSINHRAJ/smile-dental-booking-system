@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAppointment } from "@/lib/firebase/firestore";
-import type { Appointment } from "@/types/firebase";
+import type { Appointment } from "@/types/shared";
 import {
   CheckCircle,
   Calendar,
@@ -22,6 +22,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { ReceiptDocument } from "@/components/payment/PaymentReceiptPDF";
+import { analyticsService } from "@/lib/analytics/analyticsService";
 
 function BookingSuccessContent() {
   const router = useRouter();
@@ -45,6 +46,14 @@ function BookingSuccessContent() {
         return;
       }
       setAppointment(data);
+      
+      // Track booking completed event
+      analyticsService.trackBookingCompleted(
+        appointmentId!,
+        data.serviceId,
+        data.providerId,
+        data.paymentAmount
+      );
     } catch (error) {
       console.error("Error fetching appointment:", error);
       toast.error("Failed to load appointment details");

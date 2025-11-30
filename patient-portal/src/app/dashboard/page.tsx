@@ -23,11 +23,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getUserProfile, updateUserProfile, getAppointments } from '@/lib/firebase/firestore';
-import type { UserProfile } from '@/types/firebase';
-import type { Appointment } from '@/types';
+import type { UserProfile, Appointment } from '@/types/shared';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 import { AppointmentsSection } from '@/components/dashboard/AppointmentsSection';
+import { WaitlistSection } from '@/components/dashboard/WaitlistSection';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -286,7 +286,7 @@ export default function DashboardPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Profile
@@ -294,6 +294,10 @@ export default function DashboardPage() {
           <TabsTrigger value="appointments">
             <Calendar className="h-4 w-4 mr-2" />
             Appointments
+          </TabsTrigger>
+          <TabsTrigger value="waitlist">
+            <Clock className="h-4 w-4 mr-2" />
+            Waitlist
           </TabsTrigger>
         </TabsList>
 
@@ -801,6 +805,21 @@ export default function DashboardPage() {
         {/* Appointments Tab */}
         <TabsContent value="appointments" className="space-y-6">
           <AppointmentsSection appointments={appointments} />
+        </TabsContent>
+
+        {/* Waitlist Tab */}
+        <TabsContent value="waitlist" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Waitlist</CardTitle>
+              <CardDescription>
+                View and manage your waitlist entries for fully booked appointments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WaitlistSection userId={user.uid} />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

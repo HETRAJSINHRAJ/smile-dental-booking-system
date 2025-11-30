@@ -9,7 +9,7 @@ import {
   createAppointment,
 } from "@/lib/firebase/firestore";
 import { Timestamp } from "firebase/firestore";
-import type { Service, Provider } from "@/types/firebase";
+import type { Service, Provider } from "@/types/shared";
 import {
   Loader2,
   ArrowLeft,

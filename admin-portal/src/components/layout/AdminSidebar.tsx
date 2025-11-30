@@ -106,6 +106,16 @@ const menuItems = [
     href: "/manage-services",
     icon: Briefcase,
   },
+  {
+    title: "Chat",
+    href: "/chat",
+    icon: MessageSquare,
+  },
+  {
+    title: "Waitlist",
+    href: "/waitlist",
+    icon: Clock,
+  },
 ];
 
 export default function AdminSidebar() {

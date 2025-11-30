@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -18,51 +18,145 @@ import { getAllDocuments } from '../../lib/firestore';
 import { Service } from '../../types/firebase';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useMountedRef, useDebouncedValue } from '../../hooks/usePerformance';
 
 type ServicesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Memoized Service Card component
+const ServiceCard = memo<{
+  service: Service;
+  index: number;
+  onPress: () => void;
+}>(({ service, index, onPress }) => {
+  const bgColors = [
+    colors.primary[100],
+    colors.primary[50],
+    colors.accent.light,
+    colors.secondary[500],
+  ];
+  const isDark = index % 4 === 3;
+  const bgColor = bgColors[index % 4];
+
+  return (
+    <TouchableOpacity
+      style={[styles.serviceCard, { backgroundColor: bgColor }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.serviceHeader}>
+        <View style={[styles.iconContainer, isDark && styles.iconContainerDark]}>
+          <Icon
+            name="medical"
+            size={24}
+            color={isDark ? colors.neutral.white : colors.secondary[500]}
+          />
+        </View>
+      </View>
+
+      <Text
+        style={[styles.serviceName, isDark && styles.textWhite]}
+        numberOfLines={2}
+      >
+        {service.name}
+      </Text>
+
+      <Text
+        style={[styles.serviceDescription, isDark && styles.textWhiteOpacity]}
+        numberOfLines={2}
+      >
+        {service.description}
+      </Text>
+
+      <View style={styles.serviceFooter}>
+        <View style={styles.priceSection}>
+          <Text style={[styles.servicePrice, isDark && styles.textWhite]}>
+            ₹{service.price}
+          </Text>
+          <Text style={[styles.priceLabel, isDark && styles.textWhiteOpacity]}>
+            Per session
+          </Text>
+        </View>
+
+        <View style={styles.durationBadge}>
+          <Icon
+            name="time-outline"
+            size={14}
+            color={isDark ? colors.neutral.white : colors.text.secondary}
+          />
+          <Text style={[styles.durationText, isDark && styles.textWhiteOpacity]}>
+            {service.duration}m
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.arrowButton, isDark && styles.arrowButtonDark]}>
+        <Icon
+          name="arrow-forward"
+          size={18}
+          color={isDark ? colors.neutral.white : colors.text.primary}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+ServiceCard.displayName = 'ServiceCard';
 
 const ServicesScreen: React.FC = () => {
   const navigation = useNavigation<ServicesScreenNavigationProp>();
   const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const isMounted = useMountedRef();
+  
+  // Debounce search query to prevent excessive filtering
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
 
   useEffect(() => {
     loadServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredServices(services);
-    } else {
-      const filtered = services.filter(
-        (service) =>
-          service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          service.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredServices(filtered);
+  // Memoize filtered services based on debounced search query
+  const filteredServices = useMemo(() => {
+    if (debouncedSearchQuery.trim() === '') {
+      return services;
     }
-  }, [searchQuery, services]);
+    const query = debouncedSearchQuery.toLowerCase();
+    return services.filter(
+      (service) =>
+        service.name.toLowerCase().includes(query) ||
+        service.description.toLowerCase().includes(query)
+    );
+  }, [debouncedSearchQuery, services]);
 
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     try {
       const data = await getAllDocuments<Service>('services', []);
-      setServices(data);
-      setFilteredServices(data);
+      if (isMounted.current) {
+        setServices(data);
+      }
     } catch (error) {
       console.error('Error loading services:', error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [isMounted]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadServices();
-    setRefreshing(false);
-  };
+    if (isMounted.current) {
+      setRefreshing(false);
+    }
+  }, [loadServices, isMounted]);
+
+  const handleServicePress = useCallback(() => {
+    navigation.navigate('SelectService');
+  }, [navigation]);
 
   if (loading) {
     return (
@@ -119,82 +213,14 @@ const ServicesScreen: React.FC = () => {
 
         {/* Services Grid */}
         <View style={styles.servicesGrid}>
-          {filteredServices.map((service, index) => {
-            const bgColors = [
-              colors.primary[100],
-              colors.primary[50],
-              colors.accent.light,
-              colors.secondary[500],
-            ];
-            const isDark = index % 4 === 3;
-            const bgColor = bgColors[index % 4];
-
-            return (
-              <TouchableOpacity
-                key={service.id}
-                style={[styles.serviceCard, { backgroundColor: bgColor }]}
-                onPress={() => navigation.navigate('SelectService')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.serviceHeader}>
-                  <View style={[styles.iconContainer, isDark && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <Icon
-                      name="medical"
-                      size={24}
-                      color={isDark ? colors.neutral.white : colors.secondary[500]}
-                    />
-                  </View>
-                </View>
-
-                <Text
-                  style={[styles.serviceName, isDark && { color: colors.neutral.white }]}
-                  numberOfLines={2}
-                >
-                  {service.name}
-                </Text>
-
-                <Text
-                  style={[styles.serviceDescription, isDark && { color: colors.neutral.white, opacity: 0.7 }]}
-                  numberOfLines={2}
-                >
-                  {service.description}
-                </Text>
-
-                <View style={styles.serviceFooter}>
-                  <View style={styles.priceSection}>
-                    <Text style={[styles.servicePrice, isDark && { color: colors.neutral.white }]}>
-                      ₹{service.price}
-                    </Text>
-                    <Text style={[styles.priceLabel, isDark && { color: colors.neutral.white, opacity: 0.7 }]}>
-                      Per session
-                    </Text>
-                  </View>
-
-                  <View style={styles.durationBadge}>
-                    <Icon
-                      name="time-outline"
-                      size={14}
-                      color={isDark ? colors.neutral.white : colors.text.secondary}
-                    />
-                    <Text style={[styles.durationText, isDark && { color: colors.neutral.white, opacity: 0.7 }]}>
-                      {service.duration}m
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.arrowButton, isDark && { backgroundColor: 'rgba(255,255,255,0.3)' }]}
-                  onPress={() => navigation.navigate('SelectService')}
-                >
-                  <Icon
-                    name="arrow-forward"
-                    size={18}
-                    color={isDark ? colors.neutral.white : colors.text.primary}
-                  />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          })}
+          {filteredServices.map((service, index) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+              index={index}
+              onPress={handleServicePress}
+            />
+          ))}
         </View>
 
         {/* Empty State */}
@@ -351,6 +377,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  arrowButtonDark: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  iconContainerDark: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  textWhite: {
+    color: colors.neutral.white,
+  },
+  textWhiteOpacity: {
+    color: colors.neutral.white,
+    opacity: 0.7,
   },
   emptyState: {
     alignItems: 'center',

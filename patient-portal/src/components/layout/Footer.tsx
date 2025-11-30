@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export function Footer() {
   return (
@@ -131,18 +134,25 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} SmileDental. All rights reserved.</p>
-          <div className="mt-2 space-x-4">
-            <Link href="/privacy" className="hover:text-primary transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-primary transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/sitemap" className="hover:text-primary transition-colors">
-              Sitemap
-            </Link>
+        <div className="mt-12 pt-8 border-t">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} SmileDental. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4">
+              <LanguageSwitcher />
+              <div className="flex gap-4 text-sm text-muted-foreground">
+                <Link href="/privacy-policy" className="hover:text-primary transition-colors">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms-of-service" className="hover:text-primary transition-colors">
+                  Terms of Service
+                </Link>
+                <Link href="/sitemap" className="hover:text-primary transition-colors">
+                  Sitemap
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,8 @@ import {
   StatusBar,
   Modal,
   ScrollView,
-  Image,
   RefreshControl,
-  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContextWithToast';
@@ -19,6 +18,17 @@ import { getAllDocuments } from '../../lib/firestore';
 import { Appointment } from '../../types/firebase';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { ReceiptViewer } from '../../components/ReceiptViewer';
+import { ReviewForm } from '../../components/ReviewForm';
+import { Card } from '../../components/Card';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { reviewService } from '../../services/reviewService';
+import { Review } from '../../types/shared';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useMountedRef, useStableKeyExtractor } from '../../hooks/usePerformance';
 
 
 interface AppointmentSection {
@@ -29,110 +39,208 @@ interface AppointmentSection {
   collapsed: boolean;
 }
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+type FilterStatus = 'all' | 'upcoming' | 'finished' | 'cancelled' | 'no_show';
+
+interface DateRange {
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
 const AppointmentsScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const [sections, setSections] = useState<AppointmentSection[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [totalVisits, setTotalVisits] = useState(0);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'reservation' | 'bill'>('reservation');
+  const [activeTab, setActiveTab] = useState<'reservation' | 'bill' | 'review'>('reservation');
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
+  
+  // Filter states
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  
+  // Performance optimization hooks
+  const isMounted = useMountedRef();
+  const keyExtractor = useStableKeyExtractor<Appointment>();
 
+  // Check for existing review when appointment is selected
+  useEffect(() => {
+    let cancelled = false;
+    const checkExistingReview = async () => {
+      if (selectedAppointment && user) {
+        const review = await reviewService.getReviewByAppointment(user.uid, selectedAppointment.id);
+        if (!cancelled && isMounted.current) {
+          setExistingReview(review);
+        }
+      }
+    };
+    checkExistingReview();
+    return () => { cancelled = true; };
+  }, [selectedAppointment, user, isMounted]);
 
   useEffect(() => {
     if (user) {
       loadAppointments();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-
-
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     try {
       const data = await getAllDocuments<Appointment>('appointments', [
         { field: 'userId', operator: '==', value: user?.uid },
       ]);
       
-      console.log('=== APPOINTMENTS DEBUG ===');
-      console.log('Total appointments:', data.length);
-      data.forEach((apt, idx) => {
-        console.log(`Appointment ${idx + 1}:`, {
-          id: apt.id.slice(-6),
-          service: apt.serviceName,
-          status: apt.status,
-          date: new Date(apt.appointmentDate.seconds * 1000).toLocaleDateString(),
-        });
-      });
+      if (!isMounted.current) return;
       
       const sorted = data.sort((a, b) => a.appointmentDate.seconds - b.appointmentDate.seconds);
+      setAllAppointments(sorted);
+      setTotalVisits(sorted.length);
       
-      const upcoming = sorted.filter(apt => {
-        const status = apt.status?.toLowerCase().trim();
-        return status === 'confirmed' || status === 'pending';
-      });
-      
-      const finished = sorted.filter(apt => {
-        const status = apt.status?.toLowerCase().trim();
-        return status === 'completed' || status === 'cancelled';
-      });
-      
-      const noShow = sorted.filter(apt => {
-        const status = apt.status?.toLowerCase().trim();
-        return status === 'no_show';
-      });
-      
-      console.log('Upcoming appointments:', upcoming.length);
-      console.log('Finished appointments:', finished.length);
-      console.log('No Show appointments:', noShow.length);
-      console.log('========================');
-      
-      setTotalVisits(data.length);
-      
-      const newSections: AppointmentSection[] = [];
-      if (upcoming.length > 0) {
-        newSections.push({
-          title: 'Upcoming',
-          data: upcoming,
-          originalData: upcoming,
-          color: '#4A90E2',
-          collapsed: false,
-        });
-      }
-      if (finished.length > 0) {
-        newSections.push({
-          title: 'Finished',
-          data: finished,
-          originalData: finished,
-          color: '#2ECC71',
-          collapsed: false,
-        });
-      }
-      if (noShow.length > 0) {
-        newSections.push({
-          title: 'No Show',
-          data: noShow,
-          originalData: noShow,
-          color: '#FF6B6B',
-          collapsed: false,
-        });
-      }
-      
-      setSections(newSections);
+      // Apply filters
+      applyFilters(sorted);
     } catch (error) {
       console.error('Error loading appointments:', error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, isMounted]);
+
+  const applyFilters = (appointments: Appointment[]) => {
+    let filtered = [...appointments];
+
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(apt => {
+        const status = apt.status?.toLowerCase().trim();
+        switch (filterStatus) {
+          case 'upcoming':
+            return status === 'confirmed' || status === 'pending';
+          case 'finished':
+            return status === 'completed' || status === 'cancelled';
+          case 'cancelled':
+            return status === 'cancelled';
+          case 'no_show':
+            return status === 'no_show';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply date range filter
+    if (dateRange.startDate || dateRange.endDate) {
+      filtered = filtered.filter(apt => {
+        const aptDate = new Date(apt.appointmentDate.seconds * 1000);
+        aptDate.setHours(0, 0, 0, 0); // Reset time for date comparison
+        
+        if (dateRange.startDate && dateRange.endDate) {
+          const start = new Date(dateRange.startDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(dateRange.endDate);
+          end.setHours(23, 59, 59, 999);
+          return aptDate >= start && aptDate <= end;
+        } else if (dateRange.startDate) {
+          const start = new Date(dateRange.startDate);
+          start.setHours(0, 0, 0, 0);
+          return aptDate >= start;
+        } else if (dateRange.endDate) {
+          const end = new Date(dateRange.endDate);
+          end.setHours(23, 59, 59, 999);
+          return aptDate <= end;
+        }
+        return true;
+      });
+    }
+
+    // Group filtered appointments into sections
+    const upcoming = filtered.filter(apt => {
+      const status = apt.status?.toLowerCase().trim();
+      return status === 'confirmed' || status === 'pending';
+    });
+    
+    const finished = filtered.filter(apt => {
+      const status = apt.status?.toLowerCase().trim();
+      return status === 'completed' || status === 'cancelled';
+    });
+    
+    const noShow = filtered.filter(apt => {
+      const status = apt.status?.toLowerCase().trim();
+      return status === 'no_show';
+    });
+    
+    console.log('Filtered - Upcoming:', upcoming.length, 'Finished:', finished.length, 'No Show:', noShow.length);
+    
+    const newSections: AppointmentSection[] = [];
+    if (upcoming.length > 0) {
+      newSections.push({
+        title: 'Upcoming',
+        data: upcoming,
+        originalData: upcoming,
+        color: '#4A90E2',
+        collapsed: false,
+      });
+    }
+    if (finished.length > 0) {
+      newSections.push({
+        title: 'Finished',
+        data: finished,
+        originalData: finished,
+        color: '#2ECC71',
+        collapsed: false,
+      });
+    }
+    if (noShow.length > 0) {
+      newSections.push({
+        title: 'No Show',
+        data: noShow,
+        originalData: noShow,
+        color: '#FF6B6B',
+        collapsed: false,
+      });
+    }
+    
+    setSections(newSections);
   };
 
-  const handleRefresh = async () => {
+  const clearFilters = () => {
+    setFilterStatus('all');
+    setDateRange({ startDate: null, endDate: null });
+    applyFilters(allAppointments);
+  };
+
+  const hasActiveFilters = () => {
+    return filterStatus !== 'all' || dateRange.startDate !== null || dateRange.endDate !== null;
+  };
+
+  // Re-apply filters when filter state changes
+  useEffect(() => {
+    if (allAppointments.length > 0) {
+      applyFilters(allAppointments);
+    }
+  }, [filterStatus, dateRange]);
+
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadAppointments();
-    setRefreshing(false);
-  };
+    if (isMounted.current) {
+      setRefreshing(false);
+    }
+  }, [loadAppointments, isMounted]);
 
-  const toggleSection = (index: number) => {
+  const toggleSection = useCallback((index: number) => {
     setSections(prev => prev.map((section, i) => {
       if (i === index) {
         return {
@@ -143,16 +251,17 @@ const AppointmentsScreen: React.FC = () => {
       }
       return section;
     }));
-  };
+  }, []);
 
-  const getVisitNumber = (appointment: Appointment, allAppointments: Appointment[]) => {
+  // Memoize visit number calculation
+  const getVisitNumber = useCallback((appointment: Appointment, allAppointments: Appointment[]) => {
     const userAppointments = allAppointments
       .filter(apt => apt.userId === appointment.userId)
       .sort((a, b) => a.appointmentDate.seconds - b.appointmentDate.seconds);
     
     const index = userAppointments.findIndex(apt => apt.id === appointment.id);
     return index + 1;
-  };
+  }, []);
 
   const renderAppointment = ({ item, section, index }: { item: Appointment; section: AppointmentSection; index: number }) => {
     const appointmentDate = new Date(item.appointmentDate.seconds * 1000);
@@ -338,6 +447,19 @@ const AppointmentsScreen: React.FC = () => {
                     Bill detail
                   </Text>
                 </TouchableOpacity>
+                {selectedAppointment.status === 'completed' && (
+                  <TouchableOpacity 
+                    style={activeTab === 'review' ? styles.activeTab : styles.inactiveTab}
+                    onPress={() => setActiveTab('review')}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Icon name="star" size={14} color={activeTab === 'review' ? colors.primary[500] : colors.text.secondary} />
+                      <Text style={activeTab === 'review' ? styles.activeTabText : styles.inactiveTabText}>
+                        Review
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {activeTab === 'reservation' && (
@@ -353,16 +475,13 @@ const AppointmentsScreen: React.FC = () => {
                   </View>
 
                   <View style={styles.providerCard}>
-                    {selectedAppointment.providerImageUrl ? (
-                      <Image 
-                        source={{ uri: selectedAppointment.providerImageUrl }}
-                        style={styles.providerImage}
-                      />
-                    ) : (
-                      <View style={styles.providerIconContainer}>
-                        <Icon name="person" size={28} color={colors.primary[500]} />
-                      </View>
-                    )}
+                    <OptimizedImage
+                      uri={selectedAppointment.providerImageUrl}
+                      style={styles.providerImage}
+                      fallbackIcon="person"
+                      fallbackIconSize={28}
+                      fallbackIconColor={colors.primary[500]}
+                    />
                     <View style={styles.providerInfo}>
                       <Text style={styles.providerNameLarge}>{selectedAppointment.providerName}</Text>
                     </View>
@@ -447,6 +566,22 @@ const AppointmentsScreen: React.FC = () => {
                       <Icon name="document-text-outline" size={20} color={colors.text.secondary} />
                       <Text style={styles.notesText}>{selectedAppointment.notes}</Text>
                     </View>
+                  )}
+
+                  {/* Reschedule Button */}
+                  {(selectedAppointment.status === 'confirmed' || selectedAppointment.status === 'pending') && (
+                    <TouchableOpacity
+                      style={styles.rescheduleButton}
+                      onPress={() => {
+                        setModalVisible(false);
+                        // @ts-ignore - navigation type issue
+                        navigation.navigate('Reschedule', { appointment: selectedAppointment });
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Icon name="calendar-outline" size={20} color={colors.primary[500]} />
+                      <Text style={styles.rescheduleButtonText}>Reschedule Appointment</Text>
+                    </TouchableOpacity>
                   )}
 
                 </>
@@ -597,28 +732,118 @@ const AppointmentsScreen: React.FC = () => {
                       </View>
                     )}
 
-                    {/* Receipt Button */}
-                    {selectedAppointment.receiptUrl && (
+                    {/* Receipt Viewer - View Only for Patients */}
+                    {selectedAppointment.receiptUrl ? (
+                      <ReceiptViewer
+                        receiptUrl={selectedAppointment.receiptUrl}
+                        appointmentId={selectedAppointment.id}
+                      />
+                    ) : (
+                      <Card style={styles.receiptPlaceholder}>
+                        <View style={styles.receiptPlaceholderContent}>
+                          <Icon name="receipt-outline" size={48} color={colors.neutral[300]} />
+                          <Text style={styles.receiptPlaceholderTitle}>Receipt Not Available</Text>
+                          <Text style={styles.receiptPlaceholderText}>
+                            Your receipt will be available after payment confirmation
+                          </Text>
+                        </View>
+                      </Card>
+                    )}
+                    {false && (
                       <TouchableOpacity
                         style={styles.receiptButton}
-                        onPress={() => {
-                          if (selectedAppointment.receiptUrl) {
-                            Linking.openURL(selectedAppointment.receiptUrl);
-                          }
-                        }}
+                        onPress={async () => {}}
                         activeOpacity={0.7}
                       >
                         <View style={styles.receiptButtonIcon}>
                           <Icon name="document-text-outline" size={22} color={colors.primary[500]} />
                         </View>
                         <View style={styles.receiptButtonContent}>
-                          <Text style={styles.receiptButtonText}>View Receipt</Text>
-                          <Text style={styles.receiptButtonSubtext}>Download PDF</Text>
+                          <Text style={styles.receiptButtonText}>Generate Receipt</Text>
+                          <Text style={styles.receiptButtonSubtext}>Create PDF receipt</Text>
                         </View>
                         <Icon name="chevron-forward" size={20} color={colors.text.secondary} />
                       </TouchableOpacity>
                     )}
                   </View>
+                </>
+              )}
+
+              {activeTab === 'review' && (
+                <>
+                  {existingReview ? (
+                    <View style={styles.reviewContainer}>
+                      <View style={styles.reviewHeader}>
+                        <Text style={styles.reviewHeaderTitle}>Your Review</Text>
+                        <View style={[styles.reviewStatusBadge, {
+                          backgroundColor: existingReview.status === 'approved' ? '#D1F4E0' :
+                                         existingReview.status === 'rejected' ? '#FFE6E6' : '#FFF4E6'
+                        }]}>
+                          <Text style={[styles.reviewStatusText, {
+                            color: existingReview.status === 'approved' ? '#2ECC71' :
+                                   existingReview.status === 'rejected' ? '#FF6B6B' : '#FF9800'
+                          }]}>
+                            {existingReview.status === 'approved' ? 'Approved' :
+                             existingReview.status === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.reviewCard}>
+                        <View style={styles.reviewStars}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Icon
+                              key={star}
+                              name={star <= existingReview.rating ? 'star' : 'star-outline'}
+                              size={20}
+                              color={star <= existingReview.rating ? '#FFC107' : '#E0E0E0'}
+                            />
+                          ))}
+                        </View>
+                        <Text style={styles.reviewComment}>{existingReview.comment}</Text>
+                        <Text style={styles.reviewDate}>
+                          Submitted on {new Date(existingReview.createdAt.seconds * 1000).toLocaleDateString()}
+                        </Text>
+
+                        {existingReview.response && (
+                          <View style={styles.reviewResponse}>
+                            <Text style={styles.reviewResponseTitle}>
+                              Response from {selectedAppointment.providerName}
+                            </Text>
+                            <Text style={styles.reviewResponseText}>{existingReview.response}</Text>
+                            {existingReview.respondedAt && (
+                              <Text style={styles.reviewResponseDate}>
+                                Responded on {new Date(existingReview.respondedAt.seconds * 1000).toLocaleDateString()}
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.reviewFormContainer}>
+                      <Text style={styles.reviewFormTitle}>Share Your Experience</Text>
+                      <Text style={styles.reviewFormSubtitle}>
+                        Help others by sharing your experience with {selectedAppointment.providerName}
+                      </Text>
+
+                      {user && (
+                        <ReviewForm
+                          userId={user.uid}
+                          userName={selectedAppointment.userName}
+                          userEmail={selectedAppointment.userEmail}
+                          providerId={selectedAppointment.providerId}
+                          providerName={selectedAppointment.providerName}
+                          appointmentId={selectedAppointment.id}
+                          onSuccess={async () => {
+                            // Refresh the review status
+                            const review = await reviewService.getReviewByAppointment(user.uid, selectedAppointment.id);
+                            setExistingReview(review);
+                          }}
+                        />
+                      )}
+                    </View>
+                  )}
                 </>
               )}
             </View>
@@ -694,6 +919,194 @@ const AppointmentsScreen: React.FC = () => {
     );
   }
 
+  const renderFilters = () => {
+    return (
+      <View style={styles.filtersContainer}>
+        {/* Filter Toggle Button */}
+        <TouchableOpacity
+          style={[styles.filterToggleButton, hasActiveFilters() && styles.filterToggleButtonActive]}
+          onPress={() => setFiltersVisible(!filtersVisible)}
+          activeOpacity={0.7}
+        >
+          <Icon 
+            name="filter" 
+            size={18} 
+            color={hasActiveFilters() ? colors.primary[500] : colors.text.secondary} 
+          />
+          <Text style={[styles.filterToggleText, hasActiveFilters() && styles.filterToggleTextActive]}>
+            Filters {hasActiveFilters() && `(${filterStatus !== 'all' ? 1 : 0}${dateRange.startDate || dateRange.endDate ? ' +1' : ''})`}
+          </Text>
+          <Icon 
+            name={filtersVisible ? "chevron-up" : "chevron-down"} 
+            size={18} 
+            color={hasActiveFilters() ? colors.primary[500] : colors.text.secondary} 
+          />
+        </TouchableOpacity>
+
+        {/* Filters Panel */}
+        {filtersVisible && (
+          <View style={styles.filtersPanel}>
+            {/* Status Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Status</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipsContainer}>
+                <TouchableOpacity
+                  style={[styles.filterChip, filterStatus === 'all' && styles.filterChipActive]}
+                  onPress={() => setFilterStatus('all')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, filterStatus === 'all' && styles.filterChipTextActive]}>
+                    All
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterChip, filterStatus === 'upcoming' && styles.filterChipActive]}
+                  onPress={() => setFilterStatus('upcoming')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, filterStatus === 'upcoming' && styles.filterChipTextActive]}>
+                    Upcoming
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterChip, filterStatus === 'finished' && styles.filterChipActive]}
+                  onPress={() => setFilterStatus('finished')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, filterStatus === 'finished' && styles.filterChipTextActive]}>
+                    Finished
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterChip, filterStatus === 'cancelled' && styles.filterChipActive]}
+                  onPress={() => setFilterStatus('cancelled')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, filterStatus === 'cancelled' && styles.filterChipTextActive]}>
+                    Cancelled
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterChip, filterStatus === 'no_show' && styles.filterChipActive]}
+                  onPress={() => setFilterStatus('no_show')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, filterStatus === 'no_show' && styles.filterChipTextActive]}>
+                    No Show
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+
+            {/* Date Range Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Date Range</Text>
+              <View style={styles.dateRangeContainer}>
+                <TouchableOpacity
+                  style={styles.datePickerButton}
+                  onPress={() => setShowStartDatePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
+                  <Text style={styles.datePickerButtonText}>
+                    {dateRange.startDate 
+                      ? dateRange.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Start Date'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.dateRangeSeparator}>to</Text>
+                <TouchableOpacity
+                  style={styles.datePickerButton}
+                  onPress={() => setShowEndDatePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
+                  <Text style={styles.datePickerButtonText}>
+                    {dateRange.endDate 
+                      ? dateRange.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'End Date'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters() && (
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={clearFilters}
+                activeOpacity={0.7}
+              >
+                <Icon name="close-circle-outline" size={18} color={colors.primary[500]} />
+                <Text style={styles.clearFiltersButtonText}>Clear Filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Date Pickers */}
+        {showStartDatePicker && (
+          <DateTimePicker
+            value={dateRange.startDate || new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
+              setShowStartDatePicker(Platform.OS === 'ios');
+              if (selectedDate) {
+                setDateRange(prev => ({ ...prev, startDate: selectedDate }));
+              }
+            }}
+          />
+        )}
+        {showEndDatePicker && (
+          <DateTimePicker
+            value={dateRange.endDate || new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
+              setShowEndDatePicker(Platform.OS === 'ios');
+              if (selectedDate) {
+                setDateRange(prev => ({ ...prev, endDate: selectedDate }));
+              }
+            }}
+          />
+        )}
+
+        {/* Active Filters Summary */}
+        {hasActiveFilters() && !filtersVisible && (
+          <View style={styles.activeFiltersSummary}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {filterStatus !== 'all' && (
+                <View style={styles.activeFilterTag}>
+                  <Text style={styles.activeFilterTagText}>
+                    {filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1).replace('_', ' ')}
+                  </Text>
+                  <TouchableOpacity onPress={() => setFilterStatus('all')}>
+                    <Icon name="close" size={14} color={colors.primary[500]} />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {(dateRange.startDate || dateRange.endDate) && (
+                <View style={styles.activeFilterTag}>
+                  <Text style={styles.activeFilterTagText}>
+                    {dateRange.startDate && dateRange.endDate
+                      ? `${dateRange.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${dateRange.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                      : dateRange.startDate
+                      ? `From ${dateRange.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                      : `Until ${dateRange.endDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                  </Text>
+                  <TouchableOpacity onPress={() => setDateRange({ startDate: null, endDate: null })}>
+                    <Icon name="close" size={14} color={colors.primary[500]} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background.default} />
@@ -703,14 +1116,21 @@ const AppointmentsScreen: React.FC = () => {
           <Icon name="ellipsis-vertical" size={24} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
+      {renderFilters()}
       <SectionList
         sections={sections}
         renderItem={renderAppointment}
         renderSectionHeader={renderSectionHeader}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
+        // Performance optimizations
+        windowSize={5}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1232,6 +1652,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  rescheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary[50],
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  rescheduleButtonText: {
+    ...typography.titleSmall,
+    color: colors.primary[500],
+    fontWeight: '600',
+  },
   receiptButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1265,6 +1703,242 @@ const styles = StyleSheet.create({
   receiptButtonSubtext: {
     ...typography.labelSmall,
     color: colors.text.secondary,
+  },
+  receiptPlaceholder: {
+    marginTop: spacing.lg,
+    padding: spacing.xl,
+  },
+  receiptPlaceholderContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  receiptPlaceholderTitle: {
+    ...typography.titleSmall,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  receiptPlaceholderText: {
+    ...typography.bodySmall,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+  },
+  reviewContainer: {
+    marginTop: spacing.md,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  reviewHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  reviewStatusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  reviewStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  reviewCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: spacing.sm,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: colors.text.primary,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  reviewResponse: {
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: colors.neutral[50],
+    borderRadius: borderRadius.md,
+  },
+  reviewResponseTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  reviewResponseText: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: spacing.xs,
+  },
+  reviewResponseDate: {
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  reviewFormContainer: {
+    marginTop: spacing.md,
+  },
+  reviewFormTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  reviewFormSubtitle: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+  },
+  // Filter styles
+  filtersContainer: {
+    backgroundColor: colors.neutral.white,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[100],
+  },
+  filterToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.neutral[50],
+    gap: spacing.xs,
+  },
+  filterToggleButtonActive: {
+    backgroundColor: colors.primary[50],
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+  },
+  filterToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  filterToggleTextActive: {
+    color: colors.primary[500],
+  },
+  filtersPanel: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  filterSection: {
+    marginBottom: spacing.md,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  filterChipsContainer: {
+    flexDirection: 'row',
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary[500],
+    borderColor: colors.primary[500],
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  filterChipTextActive: {
+    color: colors.neutral.white,
+  },
+  dateRangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  datePickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.neutral[50],
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  datePickerButtonText: {
+    fontSize: 14,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  dateRangeSeparator: {
+    fontSize: 13,
+    color: colors.text.secondary,
+  },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary[50],
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+    marginTop: spacing.sm,
+  },
+  clearFiltersButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[500],
+  },
+  activeFiltersSummary: {
+    marginTop: spacing.sm,
+  },
+  activeFilterTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary[50],
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+    marginRight: spacing.sm,
+  },
+  activeFilterTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary[500],
   },
 });
 

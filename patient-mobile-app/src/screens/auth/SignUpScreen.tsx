@@ -31,6 +31,7 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [agreedToPrivacyPolicy, setAgreedToPrivacyPolicy] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { signUp } = useAuth();
 
@@ -43,13 +44,16 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (!agreedToTerms) {
+    if (!agreedToPrivacyPolicy || !agreedToTerms) {
       return;
     }
 
     setLoading(true);
     try {
-      await signUp(email, password, fullName, phone);
+      await signUp(email, password, fullName, phone, 'patient', {
+        privacyPolicy: agreedToPrivacyPolicy,
+        termsOfService: agreedToTerms,
+      });
     } catch (error) {
       console.error('Sign up error:', error);
     } finally {
@@ -131,7 +135,28 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
               leftIcon="lock-closed-outline"
             />
 
-            {/* Terms and Conditions */}
+            {/* Consent Checkboxes */}
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setAgreedToPrivacyPolicy(!agreedToPrivacyPolicy)}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  agreedToPrivacyPolicy && styles.checkboxChecked,
+                ]}
+              >
+                {agreedToPrivacyPolicy && (
+                  <Icon name="checkmark" size={16} color={colors.neutral.white} />
+                )}
+              </View>
+              <Text style={styles.checkboxText}>
+                I agree to the{' '}
+                <Text style={styles.linkText}>Privacy Policy</Text>
+                <Text style={styles.requiredText}> *</Text>
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.checkboxContainer}
               onPress={() => setAgreedToTerms(!agreedToTerms)}
@@ -148,8 +173,8 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <Text style={styles.checkboxText}>
                 I agree to the{' '}
-                <Text style={styles.linkText}>Terms & Conditions</Text> and{' '}
-                <Text style={styles.linkText}>Privacy Policy</Text>
+                <Text style={styles.linkText}>Terms of Service</Text>
+                <Text style={styles.requiredText}> *</Text>
               </Text>
             </TouchableOpacity>
 
@@ -249,7 +274,7 @@ const styles = StyleSheet.create({
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   checkbox: {
     width: 20,
@@ -274,6 +299,10 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: colors.secondary[500],
+    fontWeight: '600',
+  },
+  requiredText: {
+    color: colors.error[500],
     fontWeight: '600',
   },
   signUpButton: {

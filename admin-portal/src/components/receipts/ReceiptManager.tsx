@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Receipt, Download, CheckCircle, AlertCircle, FileText } from 'lucide-react';
-import { Appointment } from '@/types/firebase';
+import { Appointment } from '@/types/shared';
 import { generateAndUploadReceipt } from '@/lib/receiptGenerator';
 
 interface ReceiptManagerProps {

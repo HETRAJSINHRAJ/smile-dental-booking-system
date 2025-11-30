@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import {
   StandardizedDialog,
   StandardizedDialogContent,
@@ -24,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, User, X, Edit } from "lucide-react";
+import { Plus, Pencil, Trash2, User, X, Edit, Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -43,13 +44,17 @@ import {
   updateProviderSchedule,
   deleteProviderSchedule,
 } from "@/lib/firebase/firestore";
-import type { Provider, Service, ProviderSchedule } from "@/types/firebase";
+import type { Provider, Service, ProviderSchedule } from "@/types/shared";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UploadcareImageUpload } from "@/components/ui/uploadcare-image-upload";
+import { useAuth } from '@/contexts/AuthContext';
+import { auditLogger } from '@/lib/audit';
 
 export default function ProvidersPage() {
+  const { user } = useAuth();
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [providerSchedules, setProviderSchedules] = useState<
     ProviderSchedule[]
@@ -62,6 +67,12 @@ export default function ProvidersPage() {
     null,
   );
   const [submitting, setSubmitting] = useState(false);
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [specialtyFilter, setSpecialtyFilter] = useState("all");
+  const [availabilityFilter, setAvailabilityFilter] = useState("all");
+  const [minRating, setMinRating] = useState("all");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -134,6 +145,10 @@ export default function ProvidersPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    filterProviders();
+  }, [providers, searchTerm, specialtyFilter, availabilityFilter, minRating]);
+
   async function loadData() {
     try {
       setLoading(true);
@@ -156,6 +171,63 @@ export default function ProvidersPage() {
       setLoading(false);
     }
   }
+
+  function filterProviders() {
+    let filtered = [...providers];
+
+    // Search by name
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (provider) =>
+          provider.name.toLowerCase().includes(term) ||
+          (provider.title && provider.title.toLowerCase().includes(term)) ||
+          (provider.specialty && provider.specialty.toLowerCase().includes(term))
+      );
+    }
+
+    // Filter by specialty
+    if (specialtyFilter !== "all") {
+      filtered = filtered.filter(
+        (provider) => provider.specialty && provider.specialty.toLowerCase() === specialtyFilter.toLowerCase()
+      );
+    }
+
+    // Filter by availability status
+    if (availabilityFilter !== "all") {
+      if (availabilityFilter === "available") {
+        filtered = filtered.filter((provider) => provider.acceptingNewPatients === true);
+      } else if (availabilityFilter === "unavailable") {
+        filtered = filtered.filter((provider) => provider.acceptingNewPatients === false);
+      }
+    }
+
+    // Filter by minimum rating
+    if (minRating && minRating !== "all") {
+      const rating = parseFloat(minRating);
+      filtered = filtered.filter((provider) => (provider.rating || 0) >= rating);
+    }
+
+    setFilteredProviders(filtered);
+  }
+
+  // Get unique specialties for filter dropdown
+  const uniqueSpecialties = Array.from(
+    new Set(providers.map((p) => p.specialty).filter(Boolean))
+  ).sort();
+
+  // Generate autocomplete suggestions
+  const getAutocompleteSuggestions = () => {
+    const suggestions = new Set<string>();
+    
+    providers.forEach(provider => {
+      if (provider.name) suggestions.add(provider.name);
+      if (provider.title) suggestions.add(provider.title);
+      if (provider.specialty) suggestions.add(provider.specialty);
+    });
+    
+    return Array.from(suggestions).sort();
+  };
 
   function openCreateDialog() {
     setEditingProvider(null);
@@ -237,9 +309,38 @@ export default function ProvidersPage() {
       
       if (editingProvider) {
         await updateProvider(editingProvider.id, providerData);
+        
+        // Log provider update for audit trail
+        if (user) {
+          await auditLogger.logUpdate(
+            user.uid,
+            user.displayName || user.email || 'Admin',
+            user.email || '',
+            'admin',
+            'provider',
+            editingProvider.id,
+            editingProvider as any,
+            providerData as any
+          );
+        }
+        
         toast.success("Provider updated successfully");
       } else {
-        await createProvider(providerData);
+        const newProvider = await createProvider(providerData);
+        
+        // Log provider creation for audit trail
+        if (user && newProvider) {
+          await auditLogger.logCreate(
+            user.uid,
+            user.displayName || user.email || 'Admin',
+            user.email || '',
+            'admin',
+            'provider',
+            newProvider.id,
+            providerData as any
+          );
+        }
+        
         toast.success("Provider created successfully");
       }
       setDialogOpen(false);
@@ -258,6 +359,20 @@ export default function ProvidersPage() {
 
     try {
       await deleteProvider(deletingProvider.id);
+      
+      // Log provider deletion for audit trail
+      if (user) {
+        await auditLogger.logDelete(
+          user.uid,
+          user.displayName || user.email || 'Admin',
+          user.email || '',
+          'admin',
+          'provider',
+          deletingProvider.id,
+          deletingProvider as any
+        );
+      }
+      
       toast.success("Provider deleted successfully");
       setDeleteDialogOpen(false);
       loadData();
@@ -528,6 +643,83 @@ export default function ProvidersPage() {
         </Button>
       </div>
 
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        <AutocompleteInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          suggestions={getAutocompleteSuggestions()}
+          placeholder="Search by name, title, or specialty..."
+          icon={<Search className="h-4 w-4 text-muted-foreground" />}
+        />
+
+        {/* Advanced Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Specialty</label>
+            <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Specialties" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Specialties</SelectItem>
+                {uniqueSpecialties.map((specialty) => (
+                  <SelectItem key={specialty} value={specialty}>
+                    {specialty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Availability</label>
+            <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Providers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Providers</SelectItem>
+                <SelectItem value="available">Accepting New Patients</SelectItem>
+                <SelectItem value="unavailable">Not Accepting</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Minimum Rating</label>
+            <Select value={minRating} onValueChange={setMinRating}>
+              <SelectTrigger>
+                <SelectValue placeholder="Any Rating" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any Rating</SelectItem>
+                <SelectItem value="4.5">4.5+ Stars</SelectItem>
+                <SelectItem value="4.0">4.0+ Stars</SelectItem>
+                <SelectItem value="3.5">3.5+ Stars</SelectItem>
+                <SelectItem value="3.0">3.0+ Stars</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Clear Filters Button */}
+        {(searchTerm || specialtyFilter !== "all" || availabilityFilter !== "all" || minRating) && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setSpecialtyFilter("all");
+                setAvailabilityFilter("all");
+                setMinRating("");
+              }}
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Providers Table */}
       <Card>
         <Table>
@@ -577,8 +769,8 @@ export default function ProvidersPage() {
                   </TableRow>
                 ))}
               </>
-            ) : providers.length > 0 ? (
-              providers.map((provider) => (
+            ) : filteredProviders.length > 0 ? (
+              filteredProviders.map((provider) => (
                 <TableRow key={provider.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">

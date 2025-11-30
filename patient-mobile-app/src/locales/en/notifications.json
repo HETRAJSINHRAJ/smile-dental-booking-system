@@ -1,0 +1,95 @@
+{
+  "title": "Notifications",
+  "subtitle": "Stay updated with your appointments and messages",
+  "tabs": {
+    "all": "All",
+    "unread": "Unread",
+    "appointments": "Appointments",
+    "payments": "Payments",
+    "general": "General"
+  },
+  "types": {
+    "appointmentConfirmed": "Appointment Confirmed",
+    "appointmentReminder": "Appointment Reminder",
+    "appointmentCancelled": "Appointment Cancelled",
+    "appointmentRescheduled": "Appointment Rescheduled",
+    "paymentReceived": "Payment Received",
+    "paymentFailed": "Payment Failed",
+    "refundProcessed": "Refund Processed",
+    "reviewRequest": "Review Request",
+    "promotional": "Promotional",
+    "systemUpdate": "System Update"
+  },
+  "actions": {
+    "markAsRead": "Mark as read",
+    "markAsUnread": "Mark as unread",
+    "markAllAsRead": "Mark all as read",
+    "delete": "Delete",
+    "deleteAll": "Delete all",
+    "viewDetails": "View details"
+  },
+  "preferences": {
+    "title": "Notification Preferences",
+    "subtitle": "Manage how you receive notifications",
+    "channels": {
+      "title": "Notification Channels",
+      "email": "Email",
+      "sms": "SMS",
+      "push": "Push Notifications"
+    },
+    "types": {
+      "title": "Notification Types",
+      "appointmentReminders": "Appointment Reminders",
+      "appointmentUpdates": "Appointment Updates",
+      "paymentUpdates": "Payment Updates",
+      "promotional": "Promotional Offers",
+      "general": "General Updates"
+    },
+    "quietHours": {
+      "title": "Quiet Hours",
+      "subtitle": "Don't send notifications during these hours",
+      "enabled": "Enable quiet hours",
+      "start": "Start time",
+      "end": "End time",
+      "timezone": "Timezone"
+    },
+    "savePreferences": "Save Preferences",
+    "success": "Preferences saved successfully",
+    "failed": "Failed to save preferences"
+  },
+  "messages": {
+    "appointmentConfirmed": "Your appointment on {{date}} at {{time}} has been confirmed",
+    "appointmentReminder": "Reminder: You have an appointment tomorrow at {{time}}",
+    "appointmentCancelled": "Your appointment on {{date}} has been cancelled",
+    "appointmentRescheduled": "Your appointment has been rescheduled to {{date}} at {{time}}",
+    "paymentReceived": "Payment of {{amount}} received successfully",
+    "paymentFailed": "Payment of {{amount}} failed. Please try again",
+    "refundProcessed": "Refund of {{amount}} has been processed",
+    "reviewRequest": "How was your appointment? Please leave a review"
+  },
+  "empty": {
+    "noNotifications": "No notifications",
+    "noUnread": "No unread notifications",
+    "allCaughtUp": "You're all caught up!"
+  },
+  "settings": {
+    "title": "Notification Settings",
+    "emailNotifications": "Email Notifications",
+    "smsNotifications": "SMS Notifications",
+    "pushNotifications": "Push Notifications",
+    "soundEnabled": "Sound",
+    "vibrationEnabled": "Vibration",
+    "doNotDisturb": "Do Not Disturb",
+    "badge": "Badge Count",
+    "preview": "Show Preview",
+    "grouping": "Group Notifications"
+  },
+  "permission": {
+    "title": "Enable Notifications",
+    "message": "Stay updated with appointment reminders and important updates",
+    "enable": "Enable Notifications",
+    "later": "Maybe Later",
+    "denied": "Notification permission denied. Please enable it in settings.",
+    "openSettings": "Open Settings"
+  }
+}

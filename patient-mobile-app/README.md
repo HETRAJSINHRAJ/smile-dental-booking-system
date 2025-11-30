@@ -4,12 +4,13 @@ A React Native mobile application for patients to book dental appointments, mana
 
 ## Features
 
-- **User Authentication**: Sign up, sign in, and password reset
+- **User Authentication**: Sign up, sign in, password reset, and social login (Google, Facebook, Apple)
 - **Home Dashboard**: View featured services, providers, and quick stats
 - **Services Browser**: Browse all available dental services
 - **Appointment Booking**: Multi-step booking flow
 - **Appointment Management**: View and manage appointments
 - **Profile Management**: Update user information and settings
+- **Social Login**: Sign in with Google, Facebook, or Apple (iOS only)
 
 ## Tech Stack
 
@@ -56,10 +57,15 @@ A React Native mobile application for patients to book dental appointments, mana
 5. **Environment Setup**
    ```bash
    cp .env.example .env
-   # Edit .env with your Firebase credentials
+   # Edit .env with your Firebase credentials and social login configuration
    ```
 
-6. **Run the app**
+6. **Social Login Setup** (Optional but recommended)
+   - See [SOCIAL_LOGIN_SETUP.md](./SOCIAL_LOGIN_SETUP.md) for detailed configuration
+   - Configure Google Sign-In, Facebook Login, and Apple Sign-In
+   - Add required credentials to `.env` file
+
+7. **Run the app**
    ```bash
    # iOS
    npm run ios
@@ -89,9 +95,11 @@ src/
 
 ### Authentication
 - Email/password authentication via Firebase
+- Social login with Google, Facebook, and Apple (iOS only)
 - User profile creation with role assignment
 - Password reset functionality
 - Persistent authentication state
+- Automatic user profile creation for social login
 
 ### Navigation
 - Bottom tab navigation for main features

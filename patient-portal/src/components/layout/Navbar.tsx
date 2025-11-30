@@ -6,6 +6,7 @@ import { Menu, X, Calendar, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,6 +51,7 @@ export default function Navbar() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            <LanguageSwitcher />
             {loading ? (
               <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             ) : user ? (
@@ -112,7 +114,8 @@ export default function Navbar() {
                 </Link>
               ))}
               
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 space-y-4">
+                <LanguageSwitcher />
                 {loading ? (
                   <div className="flex justify-center">
                     <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />

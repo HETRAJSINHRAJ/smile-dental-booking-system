@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { db } from '@/lib/firebase/config';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { paymentAuditService } from '@/lib/payment/paymentAudit';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Appointment {
   id: string;
@@ -40,38 +41,58 @@ interface ServicePaymentRecorderProps {
 }
 
 const PAYMENT_METHODS = [
-  { id: 'cash', name: 'Cash', icon: <DollarSign className="w-4 h-4" /> },
-  { id: 'card', name: 'Credit/Debit Card', icon: <CreditCard className="w-4 h-4" /> },
-  { id: 'upi', name: 'UPI', icon: <CheckCircle className="w-4 h-4" /> },
-  { id: 'netbanking', name: 'Net Banking', icon: <CreditCard className="w-4 h-4" /> }
+  { id: 'cash', name: 'Cash', icon: <DollarSign className="w-4 h-4" />, requiresTransactionId: false },
+  { id: 'card', name: 'Credit/Debit Card', icon: <CreditCard className="w-4 h-4" />, requiresTransactionId: true },
+  { id: 'upi', name: 'UPI', icon: <CheckCircle className="w-4 h-4" />, requiresTransactionId: true },
+  { id: 'other', name: 'Other', icon: <DollarSign className="w-4 h-4" />, requiresTransactionId: false }
 ];
 
 export function ServicePaymentRecorder({ appointment, onPaymentRecorded }: ServicePaymentRecorderProps) {
+  const { user } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState<string>('');
-  const [amountPaid, setAmountPaid] = useState<string>('');
+  const [amountPaid, setAmountPaid] = useState<string>(appointment.servicePaymentAmount.toString());
   const [transactionId, setTransactionId] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!paymentMethod) {
+      newErrors.paymentMethod = 'Payment method is required';
+    }
+
+    if (!amountPaid) {
+      newErrors.amountPaid = 'Amount is required';
+    } else {
+      const paidAmount = parseFloat(amountPaid);
+      if (isNaN(paidAmount) || paidAmount <= 0) {
+        newErrors.amountPaid = 'Please enter a valid amount greater than 0';
+      } else if (paidAmount > appointment.servicePaymentAmount) {
+        newErrors.amountPaid = `Amount cannot exceed ${appointment.servicePaymentAmount}`;
+      }
+    }
+
+    // Check if transaction ID is required for the selected payment method
+    const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod);
+    if (selectedMethod?.requiresTransactionId && !transactionId.trim()) {
+      newErrors.transactionId = 'Transaction ID is required for this payment method';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!paymentMethod || !amountPaid) {
-      toast.error('Please fill in all required fields');
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
       return;
     }
 
     const paidAmount = parseFloat(amountPaid);
-    if (isNaN(paidAmount) || paidAmount <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    if (paidAmount > appointment.servicePaymentAmount) {
-      toast.error('Amount paid cannot exceed the service fee');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -108,9 +129,28 @@ export function ServicePaymentRecorder({ appointment, onPaymentRecorded }: Servi
           paymentMethod,
           amount: paidAmount,
           transactionId: transactionId || null,
-          notes: notes || null
+          notes: notes || null,
+          recordedBy: user?.email || 'admin'
         }
       });
+
+      // Create audit log entry for service payment
+      if (user) {
+        const { auditLogger } = await import('@/lib/audit');
+        await auditLogger.logAction(
+          user.uid,
+          user.displayName || user.email || 'Admin',
+          user.email || '',
+          'admin',
+          'update',
+          'appointment',
+          appointment.id,
+          { servicePaymentStatus: appointment.servicePaymentStatus },
+          { servicePaymentStatus: 'paid', servicePaymentAmount: paidAmount },
+          { ipAddress: '', userAgent: '' },
+          `Service payment of ₹${paidAmount} recorded via ${paymentMethod}${transactionId ? ` (Transaction ID: ${transactionId})` : ''}`
+        );
+      }
 
       toast.success('Service payment recorded successfully!');
       onPaymentRecorded();
@@ -184,8 +224,15 @@ export function ServicePaymentRecorder({ appointment, onPaymentRecorded }: Servi
           {/* Payment Method */}
           <div className="space-y-2">
             <Label htmlFor="payment-method">Payment Method *</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
-              <SelectTrigger id="payment-method">
+            <Select 
+              value={paymentMethod} 
+              onValueChange={(value) => {
+                setPaymentMethod(value);
+                setErrors(prev => ({ ...prev, paymentMethod: '' }));
+              }} 
+              required
+            >
+              <SelectTrigger id="payment-method" className={errors.paymentMethod ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select payment method" />
               </SelectTrigger>
               <SelectContent>
@@ -199,6 +246,9 @@ export function ServicePaymentRecorder({ appointment, onPaymentRecorded }: Servi
                 ))}
               </SelectContent>
             </Select>
+            {errors.paymentMethod && (
+              <p className="text-xs text-red-500">{errors.paymentMethod}</p>
+            )}
           </div>
 
           {/* Amount Paid */}
@@ -211,22 +261,48 @@ export function ServicePaymentRecorder({ appointment, onPaymentRecorded }: Servi
               min="0"
               max={appointment.servicePaymentAmount}
               value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
+              onChange={(e) => {
+                setAmountPaid(e.target.value);
+                setErrors(prev => ({ ...prev, amountPaid: '' }));
+              }}
               placeholder={`Enter amount (max: ${formatCurrency(appointment.servicePaymentAmount)})`}
               required
+              disabled={loading}
+              className={errors.amountPaid ? 'border-red-500' : ''}
             />
+            {errors.amountPaid && (
+              <p className="text-xs text-red-500">{errors.amountPaid}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Maximum amount: {formatCurrency(appointment.servicePaymentAmount)}
+            </p>
           </div>
 
           {/* Transaction ID */}
           <div className="space-y-2">
-            <Label htmlFor="transaction-id">Transaction ID (Optional)</Label>
+            <Label htmlFor="transaction-id">
+              Transaction ID {PAYMENT_METHODS.find(m => m.id === paymentMethod)?.requiresTransactionId ? '*' : '(Optional)'}
+            </Label>
             <Input
               id="transaction-id"
               type="text"
               value={transactionId}
-              onChange={(e) => setTransactionId(e.target.value)}
+              onChange={(e) => {
+                setTransactionId(e.target.value);
+                setErrors(prev => ({ ...prev, transactionId: '' }));
+              }}
               placeholder="Enter transaction reference number"
+              disabled={loading}
+              className={errors.transactionId ? 'border-red-500' : ''}
             />
+            {errors.transactionId && (
+              <p className="text-xs text-red-500">{errors.transactionId}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {PAYMENT_METHODS.find(m => m.id === paymentMethod)?.requiresTransactionId 
+                ? 'Transaction ID is required for card/UPI payments' 
+                : 'Optional for cash payments'}
+            </p>
           </div>
 
           {/* Notes */}

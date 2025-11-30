@@ -6,6 +6,8 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.facebook.FacebookSdk
+import com.facebook.appevents.AppEventsLogger
 
 class MainApplication : Application(), ReactApplication {
 
@@ -22,6 +24,11 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    
+    // Initialize Facebook SDK
+    FacebookSdk.sdkInitialize(applicationContext)
+    AppEventsLogger.activateApp(this)
+    
     loadReactNative(this)
   }
 }

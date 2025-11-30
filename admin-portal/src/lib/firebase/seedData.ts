@@ -1,6 +1,6 @@
 import { collection, addDoc, serverTimestamp, setDoc, doc } from 'firebase/firestore';
 import { db } from './config';
-import { Service, Provider, ProviderSchedule } from '@/types/firebase';
+import { Service, Provider, ProviderSchedule } from '@/types/shared';
 
 export async function seedFirestoreData() {
   try {

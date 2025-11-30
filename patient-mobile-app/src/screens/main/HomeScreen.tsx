@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
-  Image,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,11 +16,50 @@ import { getAllDocuments } from '../../lib/firestore';
 import { Service, Provider } from '../../types/firebase';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { Card } from '../../components/Card';
+import { OptimizedImage } from '../../components/OptimizedImage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import { useMountedRef } from '../../hooks/usePerformance';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Memoized Doctor Card component to prevent unnecessary re-renders
+const DoctorCard = memo<{ provider: Provider; onPress: () => void }>(({ provider, onPress }) => (
+  <Card style={styles.doctorCard}>
+    <TouchableOpacity style={styles.doctorContent} onPress={onPress} activeOpacity={0.7}>
+      <OptimizedImage
+        uri={provider.imageUrl}
+        style={styles.doctorAvatar}
+        fallbackIcon="person"
+        fallbackIconSize={32}
+        fallbackIconColor={colors.secondary[500]}
+        containerStyle={styles.doctorAvatarContainer}
+      />
+      <View style={styles.doctorInfo}>
+        <Text style={styles.doctorName}>{provider.name}</Text>
+        <Text style={styles.doctorSpecialty}>{provider.specialty}</Text>
+        <View style={styles.doctorMeta}>
+          <View style={styles.ratingContainer}>
+            <Icon name="star" size={14} color="#FCD34D" />
+            <Text style={styles.ratingText}>{provider.rating || 4.6}</Text>
+          </View>
+          <View style={styles.experienceContainer}>
+            <Icon name="time-outline" size={14} color={colors.text.secondary} />
+            <Text style={styles.experienceText}>
+              {provider.yearsOfExperience} Years
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.bookDoctorButton}>
+        <Icon name="arrow-forward" size={20} color={colors.secondary[500]} />
+      </View>
+    </TouchableOpacity>
+  </Card>
+));
+
+DoctorCard.displayName = 'DoctorCard';
 
 const HomeScreen: React.FC = () => {
   const { userProfile } = useAuth();
@@ -30,38 +68,51 @@ const HomeScreen: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const isMounted = useMountedRef();
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [servicesData, providersData] = await Promise.all([
         getAllDocuments<Service>('services', []),
         getAllDocuments<Provider>('providers', []),
       ]);
-      setServices(servicesData);
-      setProviders(providersData.slice(0, 3));
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        setServices(servicesData);
+        setProviders(providersData.slice(0, 3));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [isMounted]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
-    setRefreshing(false);
-  };
+    if (isMounted.current) {
+      setRefreshing(false);
+    }
+  }, [loadData, isMounted]);
 
-  const getGreeting = () => {
+  // Memoize greeting to prevent recalculation on every render
+  const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning, ';
     if (hour < 17) return 'Good Afternoon, ';
     return 'Good Evening, ';
-  };
+  }, []);
+
+  // Memoize displayed services (first 4)
+  const displayedServices = useMemo(() => services.slice(0, 4), [services]);
 
 
 
@@ -93,7 +144,7 @@ const HomeScreen: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.greeting}>{greeting}</Text>
             <Text style={styles.userName}>
               {userProfile?.fullName.split(' ')[0] || 'There'}
             </Text>
@@ -120,7 +171,7 @@ const HomeScreen: React.FC = () => {
 
         {/* Services Grid */}
         <View style={styles.servicesGrid}>
-          {services.slice(0, 4).map((service, index) => {
+          {displayedServices.map((service, index) => {
             const bgColors = [
               colors.primary[100],
               colors.primary[50],
@@ -199,40 +250,11 @@ const HomeScreen: React.FC = () => {
           </View>
 
           {providers.map((provider) => (
-            <Card key={provider.id} style={styles.doctorCard}>
-              <View style={styles.doctorContent}>
-                {provider.imageUrl ? (
-                  <Image
-                    source={{ uri: provider.imageUrl }}
-                    style={styles.doctorAvatar}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.doctorAvatarPlaceholder}>
-                    <Icon name="person" size={32} color={colors.secondary[500]} />
-                  </View>
-                )}
-                <View style={styles.doctorInfo}>
-                  <Text style={styles.doctorName}>{provider.name}</Text>
-                  <Text style={styles.doctorSpecialty}>{provider.specialty}</Text>
-                  <View style={styles.doctorMeta}>
-                    <View style={styles.ratingContainer}>
-                      <Icon name="star" size={14} color="#FCD34D" />
-                      <Text style={styles.ratingText}>{provider.rating || 4.6}</Text>
-                    </View>
-                    <View style={styles.experienceContainer}>
-                      <Icon name="time-outline" size={14} color={colors.text.secondary} />
-                      <Text style={styles.experienceText}>
-                        {provider.yearsOfExperience} Years
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <TouchableOpacity style={styles.bookDoctorButton}>
-                  <Icon name="arrow-forward" size={20} color={colors.secondary[500]} />
-                </TouchableOpacity>
-              </View>
-            </Card>
+            <DoctorCard
+              key={provider.id}
+              provider={provider}
+              onPress={() => navigation.navigate('SelectService')}
+            />
           ))}
         </View>
 
@@ -392,16 +414,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: borderRadius.lg,
-    marginRight: spacing.md,
   },
-  doctorAvatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
+  doctorAvatarContainer: {
     marginRight: spacing.md,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   doctorInfo: {
     flex: 1,

@@ -1,0 +1,116 @@
+{
+  "title": "My Appointments",
+  "subtitle": "View and manage your appointments",
+  "tabs": {
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "cancelled": "Cancelled",
+    "all": "All"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noShow": "No Show",
+    "rescheduled": "Rescheduled"
+  },
+  "details": {
+    "title": "Appointment Details",
+    "confirmationNumber": "Confirmation Number",
+    "service": "Service",
+    "provider": "Provider",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "location": "Location",
+    "status": "Status",
+    "notes": "Notes",
+    "paymentStatus": "Payment Status",
+    "reservationFee": "Reservation Fee",
+    "serviceFee": "Service Fee",
+    "totalPaid": "Total Paid",
+    "amountDue": "Amount Due"
+  },
+  "actions": {
+    "reschedule": "Reschedule",
+    "cancel": "Cancel",
+    "viewReceipt": "View Receipt",
+    "downloadReceipt": "Download Receipt",
+    "addToCalendar": "Add to Calendar",
+    "leaveReview": "Leave a Review",
+    "contactClinic": "Contact Clinic",
+    "getDirections": "Get Directions"
+  },
+  "reschedule": {
+    "title": "Reschedule Appointment",
+    "subtitle": "Select a new date and time",
+    "reason": "Reason for rescheduling",
+    "limitReached": "You have reached the maximum number of reschedules ({{max}}) for this appointment",
+    "history": "Reschedule History",
+    "rescheduledOn": "Rescheduled on {{date}}",
+    "from": "From",
+    "to": "To",
+    "confirmReschedule": "Confirm Reschedule",
+    "success": "Appointment rescheduled successfully",
+    "failed": "Failed to reschedule appointment"
+  },
+  "cancel": {
+    "title": "Cancel Appointment",
+    "subtitle": "Are you sure you want to cancel this appointment?",
+    "reason": "Reason for cancellation",
+    "refundPolicy": "Refund Policy",
+    "refundInfo": "Cancellations made 24 hours before the appointment are eligible for a full refund",
+    "noRefund": "Cancellations made less than 24 hours before the appointment are not eligible for a refund",
+    "confirmCancel": "Confirm Cancellation",
+    "success": "Appointment cancelled successfully",
+    "failed": "Failed to cancel appointment"
+  },
+  "review": {
+    "title": "Leave a Review",
+    "subtitle": "How was your experience?",
+    "rating": "Rating",
+    "comment": "Comment",
+    "rateExperience": "Rate your experience",
+    "writeReview": "Write your review",
+    "submitReview": "Submit Review",
+    "success": "Review submitted successfully",
+    "failed": "Failed to submit review",
+    "pending": "Your review is pending approval",
+    "minLength": "Review must be at least {{min}} characters"
+  },
+  "filters": {
+    "title": "Filter Appointments",
+    "dateRange": "Date Range",
+    "status": "Status",
+    "provider": "Provider",
+    "service": "Service",
+    "applyFilters": "Apply Filters",
+    "clearFilters": "Clear Filters"
+  },
+  "empty": {
+    "noAppointments": "No appointments found",
+    "noUpcoming": "You don't have any upcoming appointments",
+    "noPast": "You don't have any past appointments",
+    "noCancelled": "You don't have any cancelled appointments",
+    "bookNow": "Book your first appointment"
+  },
+  "receipt": {
+    "title": "Appointment Receipt",
+    "receiptNumber": "Receipt Number",
+    "issuedDate": "Issued Date",
+    "patientInfo": "Patient Information",
+    "appointmentInfo": "Appointment Information",
+    "paymentInfo": "Payment Information",
+    "paymentMethod": "Payment Method",
+    "transactionId": "Transaction ID",
+    "breakdown": "Payment Breakdown",
+    "reservationFee": "Reservation Fee",
+    "serviceFee": "Service Fee",
+    "gst": "GST (18%)",
+    "total": "Total",
+    "paid": "Paid",
+    "due": "Due",
+    "thankYou": "Thank you for choosing our clinic!"
+  }
+}

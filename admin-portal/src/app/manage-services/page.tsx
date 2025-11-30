@@ -31,12 +31,15 @@ import {
   updateService,
   deleteService,
 } from "@/lib/firebase/firestore";
-import type { Service } from "@/types/firebase";
+import type { Service } from "@/types/shared";
 import { toast } from "sonner";
 import { UploadcareImageUpload } from "@/components/ui/uploadcare-image-upload";
 import { useCurrency } from "@/lib/localization/useCurrency";
+import { useAuth } from '@/contexts/AuthContext';
+import { auditLogger } from '@/lib/audit';
 
 export default function ServicesPage() {
+  const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -110,9 +113,38 @@ export default function ServicesPage() {
     try {
       if (editingService) {
         await updateService(editingService.id, formData);
+        
+        // Log service update for audit trail
+        if (user) {
+          await auditLogger.logUpdate(
+            user.uid,
+            user.displayName || user.email || 'Admin',
+            user.email || '',
+            'admin',
+            'service',
+            editingService.id,
+            editingService as any,
+            formData as any
+          );
+        }
+        
         toast.success("Service updated successfully");
       } else {
-        await createService(formData);
+        const newService = await createService(formData);
+        
+        // Log service creation for audit trail
+        if (user && newService) {
+          await auditLogger.logCreate(
+            user.uid,
+            user.displayName || user.email || 'Admin',
+            user.email || '',
+            'admin',
+            'service',
+            newService.id,
+            formData as any
+          );
+        }
+        
         toast.success("Service created successfully");
       }
       setDialogOpen(false);
@@ -131,6 +163,20 @@ export default function ServicesPage() {
 
     try {
       await deleteService(deletingService.id);
+      
+      // Log service deletion for audit trail
+      if (user) {
+        await auditLogger.logDelete(
+          user.uid,
+          user.displayName || user.email || 'Admin',
+          user.email || '',
+          'admin',
+          'service',
+          deletingService.id,
+          deletingService as any
+        );
+      }
+      
       toast.success("Service deleted successfully");
       setDeleteDialogOpen(false);
       loadServices();

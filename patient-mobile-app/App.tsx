@@ -14,8 +14,18 @@ import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/onboarding/SplashScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import { setupNotificationHandlers, PDFDownloadManager } from './src/utils/pdfDownloadManager';
+import { initSentry } from './sentry.config';
+import { initAnalytics } from './src/lib/analytics';
+import { markAppReady } from './src/lib/performanceMonitoring';
+import './src/i18n/config'; // Initialize i18n
 
 const ONBOARDING_KEY = '@onboarding_completed';
+
+// Initialize Sentry error tracking
+initSentry();
+
+// Initialize Firebase Analytics
+initAnalytics();
 
 // Initialize notification handlers
 setupNotificationHandlers();
@@ -49,6 +59,8 @@ function App() {
   const handleSplashFinish = () => {
     setShowSplash(false);
     setIsReady(true);
+    // Mark app as ready for performance tracking
+    markAppReady();
   };
 
   const handleOnboardingFinish = async () => {

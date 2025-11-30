@@ -15,7 +15,15 @@ import {
   limit as firestoreLimit
 } from 'firebase/firestore';
 import { db } from './config';
-import type { Service, Provider, ProviderSchedule, Appointment, ContactInquiry, UserProfile } from '@/types/firebase';
+import type { Service, Provider, ProviderSchedule, Appointment, ContactInquiry, UserProfile } from '@/types/shared';
+import {
+  firebaseCache,
+  CACHE_KEYS,
+  getCachedProviders,
+  setCachedProviders,
+  getCachedServices,
+  setCachedServices
+} from './cache';
 
 // Generic Firestore operations
 export async function getDocument<T>(collectionName: string, docId: string): Promise<T | null> {
@@ -94,18 +102,84 @@ export async function deleteDocument(collectionName: string, docId: string): Pro
   }
 }
 
-// Service-specific operations
-export const getServices = () => getAllDocuments<Service>('services', [orderBy('name', 'asc')]);
-export const getService = (id: string) => getDocument<Service>('services', id);
+// Service-specific operations with caching
+export const getServices = async (): Promise<Service[]> => {
+  // Check cache first
+  const cached = getCachedServices<Service[]>();
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const services = await getAllDocuments<Service>('services', [orderBy('name', 'asc')]);
+  
+  // Cache the result
+  setCachedServices(services);
+  
+  return services;
+};
+
+export const getService = async (id: string): Promise<Service | null> => {
+  // Check cache first
+  const cacheKey = CACHE_KEYS.SERVICE(id);
+  const cached = firebaseCache.get<Service>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const service = await getDocument<Service>('services', id);
+  
+  // Cache the result if found
+  if (service) {
+    firebaseCache.set(cacheKey, service);
+  }
+  
+  return service;
+};
+
 export const createService = (data: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>) => 
   createDocument<Service>('services', data);
 export const updateService = (id: string, data: Partial<Service>) => 
   updateDocument<Service>('services', id, data);
 export const deleteService = (id: string) => deleteDocument('services', id);
 
-// Provider-specific operations
-export const getProviders = () => getAllDocuments<Provider>('providers', [orderBy('name', 'asc')]);
-export const getProvider = (id: string) => getDocument<Provider>('providers', id);
+// Provider-specific operations with caching
+export const getProviders = async (): Promise<Provider[]> => {
+  // Check cache first
+  const cached = getCachedProviders<Provider[]>();
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const providers = await getAllDocuments<Provider>('providers', [orderBy('name', 'asc')]);
+  
+  // Cache the result
+  setCachedProviders(providers);
+  
+  return providers;
+};
+
+export const getProvider = async (id: string): Promise<Provider | null> => {
+  // Check cache first
+  const cacheKey = CACHE_KEYS.PROVIDER(id);
+  const cached = firebaseCache.get<Provider>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  // Fetch from Firestore
+  const provider = await getDocument<Provider>('providers', id);
+  
+  // Cache the result if found
+  if (provider) {
+    firebaseCache.set(cacheKey, provider);
+  }
+  
+  return provider;
+};
+
 export const getProvidersByService = (serviceId: string) => 
   getAllDocuments<Provider>('providers', [where('serviceIds', 'array-contains', serviceId)]);
 export const createProvider = (data: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>) => 

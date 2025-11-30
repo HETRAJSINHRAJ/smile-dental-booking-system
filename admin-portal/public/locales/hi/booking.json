@@ -1,0 +1,22 @@
+{
+  "title": "मरीज के लिए अपॉइंटमेंट बुक करें",
+  "subtitle": "मरीज की ओर से एक नया अपॉइंटमेंट बनाएं",
+  "selectPatient": "मरीज चुनें",
+  "createNewPatient": "नया मरीज बनाएं",
+  "patientSearch": "नाम, ईमेल या फ़ोन से खोजें",
+  "noPatientFound": "कोई मरीज नहीं मिला",
+  "steps": {
+    "selectService": "सेवा चुनें",
+    "selectProvider": "डॉक्टर चुनें",
+    "selectDateTime": "तारीख और समय चुनें",
+    "patientDetails": "मरीज का विवरण",
+    "confirmation": "पुष्टि"
+  },
+  "success": {
+    "title": "अपॉइंटमेंट सफलतापूर्वक बनाया गया",
+    "confirmationNumber": "पुष्टि संख्या",
+    "notificationSent": "मरीज को पुष्टि ईमेल भेजा गया",
+    "viewAppointment": "अपॉइंटमेंट देखें",
+    "createAnother": "एक और अपॉइंटमेंट बनाएं"
+  }
+}

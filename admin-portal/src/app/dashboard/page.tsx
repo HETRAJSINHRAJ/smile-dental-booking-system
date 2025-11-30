@@ -1,14 +1,52 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Card } from "@/components/ui/card";
 import { Calendar, Users, Clock, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getAppointments } from "@/lib/firebase/firestore";
-import { collection, query, getDocs } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
-import type { Appointment } from "@/types/firebase";
+import type { Appointment } from "@/types/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import TodayAppointmentsSummary from "@/components/dashboard/TodayAppointmentsSummary";
+import { PaymentMetrics } from "@/components/dashboard/PaymentMetrics";
+import { DateRangeSelector, DateRangePreset, DateRange } from "@/components/dashboard/DateRangeSelector";
+import { AnalyticsDataService, DashboardAnalytics } from "@/lib/analytics/analyticsDataService";
+import { ChartSkeleton, DashboardStatsSkeleton } from "@/components/ui/loading-skeletons";
+
+// Lazy load chart components for better initial page load
+const AppointmentsChart = dynamic(
+  () => import("@/components/dashboard/AppointmentsChart").then(mod => ({ default: mod.AppointmentsChart })),
+  { 
+    loading: () => <ChartSkeleton />,
+    ssr: false 
+  }
+);
+
+const RevenueChart = dynamic(
+  () => import("@/components/dashboard/RevenueChart").then(mod => ({ default: mod.RevenueChart })),
+  { 
+    loading: () => <ChartSkeleton />,
+    ssr: false 
+  }
+);
+
+const AppointmentStatusChart = dynamic(
+  () => import("@/components/dashboard/AppointmentStatusChart").then(mod => ({ default: mod.AppointmentStatusChart })),
+  { 
+    loading: () => <ChartSkeleton />,
+    ssr: false 
+  }
+);
+
+const ConversionFunnelChart = dynamic(
+  () => import("@/components/dashboard/ConversionFunnelChart").then(mod => ({ default: mod.ConversionFunnelChart })),
+  { 
+    loading: () => <ChartSkeleton />,
+    ssr: false 
+  }
+);
 
 interface Stats {
   todayAppointments: number;
@@ -26,6 +64,10 @@ export default function AdminDashboard() {
   });
   const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>("month");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -86,7 +128,31 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const statCards = [
+  // Fetch analytics data when date range changes
+  useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        setAnalyticsLoading(true);
+        const dateRange = AnalyticsDataService.getDateRange(dateRangePreset, customDateRange);
+        const data = await AnalyticsDataService.fetchDashboardAnalytics(dateRange);
+        setAnalytics(data);
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    }
+
+    fetchAnalytics();
+  }, [dateRangePreset, customDateRange]);
+
+  const handleDateRangeChange = (preset: DateRangePreset, customRange?: DateRange) => {
+    setDateRangePreset(preset);
+    setCustomDateRange(customRange);
+  };
+
+  // Memoize stat cards to prevent unnecessary re-renders
+  const statCards = useMemo(() => [
     {
       title: "Today's Appointments",
       value: stats.todayAppointments.toString(),
@@ -115,7 +181,14 @@ export default function AdminDashboard() {
       color: "text-purple-600",
       bgColor: "bg-purple-100 dark:bg-purple-950",
     },
-  ];
+  ], [stats]);
+
+  // Memoize filtered appointments for quick stats
+  const quickStats = useMemo(() => ({
+    confirmed: recentAppointments.filter(apt => apt.status === "confirmed").length,
+    pending: recentAppointments.filter(apt => apt.status === "pending").length,
+    completed: recentAppointments.filter(apt => apt.status === "completed").length,
+  }), [recentAppointments]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -145,18 +218,18 @@ export default function AdminDashboard() {
       {/* Today's Appointments Summary */}
       <TodayAppointmentsSummary />
 
+      {/* Payment Metrics */}
+      <PaymentMetrics />
+
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title} className="p-6">
-              {loading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              ) : (
+      {loading ? (
+        <DashboardStatsSkeleton />
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {statCards.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={stat.title} className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
@@ -168,11 +241,11 @@ export default function AdminDashboard() {
                     <Icon className={`h-6 w-6 ${stat.color}`} />
                   </div>
                 </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -198,7 +271,7 @@ export default function AdminDashboard() {
                   key={apt.id}
                   className="flex items-center gap-4 p-3 rounded-lg border"
                 >
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Calendar className="h-5 w-5 text-primary" />
                     </div>
@@ -245,25 +318,60 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <span className="text-sm font-medium">Confirmed Today</span>
                   <span className="text-lg font-bold text-green-600">
-                    {recentAppointments.filter(apt => apt.status === "confirmed").length}
+                    {quickStats.confirmed}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <span className="text-sm font-medium">Pending Today</span>
                   <span className="text-lg font-bold text-yellow-600">
-                    {recentAppointments.filter(apt => apt.status === "pending").length}
+                    {quickStats.pending}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <span className="text-sm font-medium">Completed Today</span>
                   <span className="text-lg font-bold text-blue-600">
-                    {recentAppointments.filter(apt => apt.status === "completed").length}
+                    {quickStats.completed}
                   </span>
                 </div>
               </>
             )}
           </div>
         </Card>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Analytics & Reports</h2>
+        </div>
+
+        {/* Date Range Selector */}
+        <DateRangeSelector
+          value={dateRangePreset}
+          customRange={customDateRange}
+          onChange={handleDateRangeChange}
+        />
+
+        {analyticsLoading ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <ChartSkeleton key={i} />
+            ))}
+          </div>
+        ) : analytics ? (
+          <>
+            {/* Charts Grid */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AppointmentsChart data={analytics.appointmentsByDate} />
+              <RevenueChart data={analytics.revenueByDate} />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AppointmentStatusChart data={analytics.appointments} />
+              <ConversionFunnelChart data={analytics.conversion} />
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );

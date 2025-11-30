@@ -84,6 +84,23 @@ export interface Service {
 // Appointment
 export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
+export interface RescheduleHistoryEntry {
+  from: {
+    date: Date;
+    startTime: string;
+    endTime: string;
+  };
+  to: {
+    date: Date;
+    startTime: string;
+    endTime: string;
+  };
+  reason?: string;
+  rescheduledBy: string; // userId
+  rescheduledByRole: 'patient' | 'admin';
+  rescheduledAt: Date;
+}
+
 export interface Appointment {
   id: string;
   patientId: string;
@@ -92,6 +109,7 @@ export interface Appointment {
   patientPhone: string;
   providerId: string;
   providerName: string;
+  providerImageUrl?: string;
   serviceId: string;
   serviceName: string;
   serviceDuration: number;
@@ -103,6 +121,12 @@ export interface Appointment {
   adminNotes?: string;
   cancellationReason?: string;
   cancelledAt?: Date;
+  
+  // Rescheduling fields
+  rescheduleCount: number;
+  rescheduleHistory?: RescheduleHistoryEntry[];
+  maxReschedules: number; // Default: 2
+  
   reminderSent: boolean;
   confirmationSent: boolean;
   createdAt: Date;
@@ -159,4 +183,24 @@ export interface TimeBlock {
   endTime: string;
   reason: string;
   createdAt: Date;
+}
+
+// Review
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  providerId: string;
+  providerName: string;
+  appointmentId?: string;
+  rating: number; // 1-5
+  comment: string;
+  status: ReviewStatus;
+  response?: string;
+  respondedBy?: string;
+  respondedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }

@@ -1,0 +1,22 @@
+{
+  "title": "Book Appointment for Patient",
+  "subtitle": "Create a new appointment on behalf of a patient",
+  "selectPatient": "Select Patient",
+  "createNewPatient": "Create New Patient",
+  "patientSearch": "Search by name, email, or phone",
+  "noPatientFound": "No patient found",
+  "steps": {
+    "selectService": "Select Service",
+    "selectProvider": "Select Provider",
+    "selectDateTime": "Select Date & Time",
+    "patientDetails": "Patient Details",
+    "confirmation": "Confirmation"
+  },
+  "success": {
+    "title": "Appointment Created Successfully",
+    "confirmationNumber": "Confirmation Number",
+    "notificationSent": "Confirmation email sent to patient",
+    "viewAppointment": "View Appointment",
+    "createAnother": "Create Another Appointment"
+  }
+}

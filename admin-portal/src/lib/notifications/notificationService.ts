@@ -1,6 +1,9 @@
 import { adminApp, adminDb } from '../firebase/admin';
 import { getMessaging } from 'firebase-admin/messaging';
 import { Timestamp } from 'firebase-admin/firestore';
+import emailService from '../email/emailService';
+import smsService from '../sms/smsService';
+import { format } from 'date-fns';
 
 export type NotificationType = 
   | 'appointment_confirmed'
@@ -94,7 +97,7 @@ class NotificationService {
   }
 
   /**
-   * Send appointment confirmation notification
+   * Send appointment confirmation notification (push + email + SMS)
    */
   async sendAppointmentConfirmation(
     userId: string,
@@ -104,9 +107,14 @@ class NotificationService {
       date: string;
       time: string;
       appointmentId: string;
+      patientName: string;
+      patientEmail: string;
+      patientPhone?: string;
+      confirmationNumber?: string;
     }
   ): Promise<boolean> {
-    return this.sendNotification({
+    // Send push notification
+    const pushSent = await this.sendNotification({
       userId,
       title: 'Appointment Confirmed',
       body: `Your appointment for ${appointmentDetails.serviceName} with ${appointmentDetails.providerName} on ${appointmentDetails.date} at ${appointmentDetails.time} has been confirmed.`,
@@ -114,10 +122,39 @@ class NotificationService {
       appointmentId: appointmentDetails.appointmentId,
       data: appointmentDetails,
     });
+
+    // Send email notification
+    const emailSent = await emailService.sendAppointmentConfirmation({
+      patientName: appointmentDetails.patientName,
+      patientEmail: appointmentDetails.patientEmail,
+      serviceName: appointmentDetails.serviceName,
+      providerName: appointmentDetails.providerName,
+      appointmentDate: appointmentDetails.date,
+      appointmentTime: appointmentDetails.time,
+      confirmationNumber: appointmentDetails.confirmationNumber,
+      appointmentId: appointmentDetails.appointmentId,
+    });
+
+    // Send SMS notification if phone number is provided
+    let smsSent = false;
+    if (appointmentDetails.patientPhone) {
+      smsSent = await smsService.sendAppointmentConfirmation({
+        patientName: appointmentDetails.patientName,
+        patientPhone: appointmentDetails.patientPhone,
+        serviceName: appointmentDetails.serviceName,
+        providerName: appointmentDetails.providerName,
+        appointmentDate: appointmentDetails.date,
+        appointmentTime: appointmentDetails.time,
+        confirmationNumber: appointmentDetails.confirmationNumber,
+        appointmentId: appointmentDetails.appointmentId,
+      });
+    }
+
+    return pushSent || emailSent || smsSent;
   }
 
   /**
-   * Send appointment reminder
+   * Send appointment reminder (push + email + SMS)
    */
   async sendAppointmentReminder(
     userId: string,
@@ -127,9 +164,13 @@ class NotificationService {
       date: string;
       time: string;
       appointmentId: string;
+      patientName: string;
+      patientEmail: string;
+      patientPhone?: string;
     }
   ): Promise<boolean> {
-    return this.sendNotification({
+    // Send push notification
+    const pushSent = await this.sendNotification({
       userId,
       title: 'Appointment Reminder',
       body: `Reminder: You have an appointment for ${appointmentDetails.serviceName} with ${appointmentDetails.providerName} tomorrow at ${appointmentDetails.time}.`,
@@ -137,10 +178,37 @@ class NotificationService {
       appointmentId: appointmentDetails.appointmentId,
       data: appointmentDetails,
     });
+
+    // Send email notification
+    const emailSent = await emailService.sendAppointmentReminder({
+      patientName: appointmentDetails.patientName,
+      patientEmail: appointmentDetails.patientEmail,
+      serviceName: appointmentDetails.serviceName,
+      providerName: appointmentDetails.providerName,
+      appointmentDate: appointmentDetails.date,
+      appointmentTime: appointmentDetails.time,
+      appointmentId: appointmentDetails.appointmentId,
+    });
+
+    // Send SMS notification if phone number is provided
+    let smsSent = false;
+    if (appointmentDetails.patientPhone) {
+      smsSent = await smsService.sendAppointmentReminder({
+        patientName: appointmentDetails.patientName,
+        patientPhone: appointmentDetails.patientPhone,
+        serviceName: appointmentDetails.serviceName,
+        providerName: appointmentDetails.providerName,
+        appointmentDate: appointmentDetails.date,
+        appointmentTime: appointmentDetails.time,
+        appointmentId: appointmentDetails.appointmentId,
+      });
+    }
+
+    return pushSent || emailSent || smsSent;
   }
 
   /**
-   * Send appointment cancellation notification
+   * Send appointment cancellation notification (push + email + SMS)
    */
   async sendAppointmentCancellation(
     userId: string,
@@ -150,10 +218,14 @@ class NotificationService {
       date: string;
       time: string;
       appointmentId: string;
+      patientName: string;
+      patientEmail: string;
+      patientPhone?: string;
       reason?: string;
     }
   ): Promise<boolean> {
-    return this.sendNotification({
+    // Send push notification
+    const pushSent = await this.sendNotification({
       userId,
       title: 'Appointment Cancelled',
       body: `Your appointment for ${appointmentDetails.serviceName} on ${appointmentDetails.date} has been cancelled.${appointmentDetails.reason ? ` Reason: ${appointmentDetails.reason}` : ''}`,
@@ -161,10 +233,39 @@ class NotificationService {
       appointmentId: appointmentDetails.appointmentId,
       data: appointmentDetails,
     });
+
+    // Send email notification
+    const emailSent = await emailService.sendAppointmentCancellation({
+      patientName: appointmentDetails.patientName,
+      patientEmail: appointmentDetails.patientEmail,
+      serviceName: appointmentDetails.serviceName,
+      providerName: appointmentDetails.providerName,
+      appointmentDate: appointmentDetails.date,
+      appointmentTime: appointmentDetails.time,
+      cancellationReason: appointmentDetails.reason,
+      appointmentId: appointmentDetails.appointmentId,
+    });
+
+    // Send SMS notification if phone number is provided
+    let smsSent = false;
+    if (appointmentDetails.patientPhone) {
+      smsSent = await smsService.sendAppointmentCancellation({
+        patientName: appointmentDetails.patientName,
+        patientPhone: appointmentDetails.patientPhone,
+        serviceName: appointmentDetails.serviceName,
+        providerName: appointmentDetails.providerName,
+        appointmentDate: appointmentDetails.date,
+        appointmentTime: appointmentDetails.time,
+        cancellationReason: appointmentDetails.reason,
+        appointmentId: appointmentDetails.appointmentId,
+      });
+    }
+
+    return pushSent || emailSent || smsSent;
   }
 
   /**
-   * Send payment success notification
+   * Send payment success notification (push + email + SMS)
    */
   async sendPaymentSuccess(
     userId: string,
@@ -173,9 +274,14 @@ class NotificationService {
       serviceName: string;
       transactionId: string;
       appointmentId: string;
+      patientName: string;
+      patientEmail: string;
+      patientPhone?: string;
+      receiptUrl?: string;
     }
   ): Promise<boolean> {
-    return this.sendNotification({
+    // Send push notification
+    const pushSent = await this.sendNotification({
       userId,
       title: 'Payment Successful',
       body: `Your payment of ₹${paymentDetails.amount} for ${paymentDetails.serviceName} was successful.`,
@@ -183,6 +289,30 @@ class NotificationService {
       appointmentId: paymentDetails.appointmentId,
       data: paymentDetails,
     });
+
+    // Send email notification with receipt
+    const emailSent = await emailService.sendPaymentReceipt({
+      patientName: paymentDetails.patientName,
+      patientEmail: paymentDetails.patientEmail,
+      amount: paymentDetails.amount,
+      transactionId: paymentDetails.transactionId,
+      serviceName: paymentDetails.serviceName,
+      receiptUrl: paymentDetails.receiptUrl,
+    });
+
+    // Send SMS notification if phone number is provided
+    let smsSent = false;
+    if (paymentDetails.patientPhone) {
+      smsSent = await smsService.sendPaymentReceipt({
+        patientName: paymentDetails.patientName,
+        patientPhone: paymentDetails.patientPhone,
+        amount: paymentDetails.amount,
+        transactionId: paymentDetails.transactionId,
+        serviceName: paymentDetails.serviceName,
+      });
+    }
+
+    return pushSent || emailSent || smsSent;
   }
 
   /**
@@ -285,9 +415,12 @@ class NotificationService {
           {
             serviceName: appointment.serviceName,
             providerName: appointment.providerName,
-            date: appointment.appointmentDate.toDate().toLocaleDateString(),
+            date: format(appointment.appointmentDate.toDate(), 'MMMM d, yyyy'),
             time: appointment.startTime,
             appointmentId: doc.id,
+            patientName: appointment.userName,
+            patientEmail: appointment.userEmail,
+            patientPhone: appointment.userPhone,
           }
         );
 

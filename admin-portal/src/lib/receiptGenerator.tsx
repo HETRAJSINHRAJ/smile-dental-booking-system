@@ -1,4 +1,4 @@
-import { Appointment } from '@/types/firebase';
+import { Appointment } from '@/types/shared';
 import { updateDocument } from '@/lib/firebase/firestore';
 import { uploadToUploadcare } from '@/lib/uploadcare';
 import { pdf } from '@react-pdf/renderer';
@@ -27,6 +27,13 @@ export async function generateAndUploadReceipt(appointment: Appointment): Promis
       endTime: appointment.endTime,
       confirmationNumber: appointment.confirmationNumber,
       issueDate: new Date(),
+      // Payment information with defaults
+      paymentAmount: appointment.paymentAmount || 0,
+      servicePaymentAmount: appointment.servicePaymentAmount || 0,
+      paymentStatus: appointment.paymentStatus || 'pending',
+      servicePaymentStatus: appointment.servicePaymentStatus || 'pending',
+      paymentMethod: appointment.paymentMethod,
+      paymentTransactionId: appointment.paymentTransactionId,
     };
 
     // Generate PDF blob (same pattern as images)

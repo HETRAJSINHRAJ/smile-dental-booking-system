@@ -1,27 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/ratelimit';
+import { validateInput, formatZodErrors, sanitizeText } from '@/lib/validation';
 
 // Razorpay credentials should come from environment variables
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
+// Zod schema for create order request
+const createOrderSchema = z.object({
+  amount: z.number().positive('Amount must be positive').int('Amount must be in paise (integer)'),
+  currency: z.enum(['INR']).default('INR'),
+  receipt: z.string().min(1, 'Receipt ID is required').max(40, 'Receipt ID is too long'),
+  notes: z.record(z.string()).optional(),
+  gateway: z.enum(['razorpay']),
+  environment: z.enum(['test', 'live']).optional(),
+  userId: z.string().optional(),
+});
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { amount, currency, receipt, notes, gateway, environment } = body;
 
-    // Validate required fields
-    if (!amount || !currency || !receipt) {
+    // Validate input using Zod schema
+    const validation = validateInput(createOrderSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: amount, currency, receipt' },
+        { 
+          error: 'Validation failed', 
+          details: formatZodErrors(validation.errors!) 
+        },
         { status: 400 }
       );
     }
 
-    if (gateway !== 'razorpay') {
-      return NextResponse.json(
-        { error: 'Only Razorpay gateway is currently supported' },
-        { status: 400 }
-      );
+    const { amount, currency, receipt, notes, gateway, userId } = validation.data!;
+
+    // Apply rate limiting (3 attempts per hour per user)
+    const rateLimitIdentifier = userId || receipt || 'anonymous';
+    const { allowed, response, result } = await rateLimitMiddleware(
+      request,
+      'payments',
+      rateLimitIdentifier
+    );
+    
+    if (!allowed && response) {
+      return response;
     }
 
     // Validate env credentials
@@ -58,12 +82,17 @@ export async function POST(request: NextRequest) {
 
     const rpOrder = await rpResponse.json();
     // rpOrder.id is like 'order_XXXXXXXXXXXX'
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       orderId: rpOrder.id,
       amount: rpOrder.amount,
       currency: rpOrder.currency,
       status: rpOrder.status || 'created'
     });
+    
+    // Add rate limit headers to successful response
+    addRateLimitHeaders(successResponse, result);
+    
+    return successResponse;
 
   } catch (error) {
     console.error('Error creating payment order:', error);

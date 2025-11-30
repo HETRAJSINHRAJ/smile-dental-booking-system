@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Calendar, Users, UserCog, Briefcase, LayoutDashboard } from "lucide-react";
+import { Calendar, Users, UserCog, Briefcase, LayoutDashboard, MessageSquare, Clock } from "lucide-react";
 import NotificationBell from "./NotificationBell";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const pageInfo: Record<string, { title: string; description: string; icon: any }> = {
   '/dashboard': {
@@ -30,6 +31,16 @@ const pageInfo: Record<string, { title: string; description: string; icon: any }
     description: 'Manage dental services and pricing',
     icon: Briefcase,
   },
+  '/chat': {
+    title: 'Chat',
+    description: 'Manage patient conversations and support',
+    icon: MessageSquare,
+  },
+  '/waitlist': {
+    title: 'Waitlist',
+    description: 'Manage patient waitlist and notifications',
+    icon: Clock,
+  },
 };
 
 export default function AdminHeader() {
@@ -55,6 +66,7 @@ export default function AdminHeader() {
         </div>
         
         <div className="flex items-center gap-4">
+          <LanguageSwitcher />
           <NotificationBell />
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">

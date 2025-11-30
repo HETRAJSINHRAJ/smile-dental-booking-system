@@ -5,6 +5,7 @@
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+import database from '@react-native-firebase/database';
 
 // Export Firebase services
-export { auth, firestore, storage };
+export { auth, firestore, storage, database };

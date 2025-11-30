@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">patient</string>
+    <string name="facebook_app_id">3765907043710785</string>
+    <string name="fb_login_protocol_scheme">fb3765907043710785</string>
+    <string name="facebook_client_token">YOUR_FACEBOOK_CLIENT_TOKEN</string>
 </resources>

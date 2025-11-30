@@ -13,9 +13,16 @@ import { useAuth } from '../../contexts/AuthContextWithToast';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { Card } from '../../components/Card';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { LanguageSelector } from '../../components/LanguageSelector';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
+
+type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ProfileScreen: React.FC = () => {
   const { user, userProfile, signOut } = useAuth();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -30,14 +37,21 @@ const ProfileScreen: React.FC = () => {
       title: 'Edit Profile',
       subtitle: 'Update your information',
       color: colors.primary[500],
-      onPress: () => {},
+      onPress: () => navigation.navigate('EditProfile'),
+    },
+    {
+      icon: 'link-outline',
+      title: 'Linked Accounts',
+      subtitle: 'Manage sign-in methods',
+      color: colors.secondary[600],
+      onPress: () => navigation.navigate('LinkedAccounts'),
     },
     {
       icon: 'notifications-outline',
       title: 'Notifications',
       subtitle: 'Manage your alerts',
       color: colors.secondary[500],
-      onPress: () => {},
+      onPress: () => navigation.navigate('NotificationPreferences'),
     },
     {
       icon: 'lock-closed-outline',
@@ -52,6 +66,12 @@ const ProfileScreen: React.FC = () => {
       subtitle: 'Get assistance',
       color: colors.accent.main,
       onPress: () => {},
+    },
+  ];
+
+  const settingsItems = [
+    {
+      component: <LanguageSelector />,
     },
   ];
 
@@ -73,7 +93,10 @@ const ProfileScreen: React.FC = () => {
               <Text style={styles.name}>{userProfile?.fullName || 'User'}</Text>
               <Text style={styles.email}>{user?.email}</Text>
             </View>
-            <TouchableOpacity style={styles.editButton}>
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={() => navigation.navigate('EditProfile')}
+            >
               <Icon name="create-outline" size={20} color={colors.secondary[500]} />
             </TouchableOpacity>
           </View>
@@ -102,12 +125,108 @@ const ProfileScreen: React.FC = () => {
                 <Text style={styles.infoValue}>{userProfile?.phone || 'Not set'}</Text>
               </View>
             </View>
+            {userProfile?.gender && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Icon name="male-female" size={20} color={colors.primary[500]} />
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Gender</Text>
+                    <Text style={styles.infoValue}>{userProfile.gender}</Text>
+                  </View>
+                </View>
+              </>
+            )}
           </Card>
         </View>
+
+        {/* Address Information */}
+        {userProfile?.address && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Address</Text>
+            <Card style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Icon name="location" size={20} color={colors.primary[500]} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Address</Text>
+                  <Text style={styles.infoValue}>
+                    {[
+                      userProfile.address.street,
+                      userProfile.address.city,
+                      userProfile.address.state,
+                      userProfile.address.zipCode,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Emergency Contact */}
+        {userProfile?.emergencyContact && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Emergency Contact</Text>
+            <Card style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <Icon name="person-add" size={20} color={colors.error.main} />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Name</Text>
+                  <Text style={styles.infoValue}>{userProfile.emergencyContact.name}</Text>
+                </View>
+              </View>
+              {userProfile.emergencyContact.relationship && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIcon}>
+                      <Icon name="people" size={20} color={colors.error.main} />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Relationship</Text>
+                      <Text style={styles.infoValue}>{userProfile.emergencyContact.relationship}</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+              {userProfile.emergencyContact.phone && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIcon}>
+                      <Icon name="call" size={20} color={colors.error.main} />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Phone</Text>
+                      <Text style={styles.infoValue}>{userProfile.emergencyContact.phone}</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+            </Card>
+          </View>
+        )}
 
         {/* Settings Menu */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
+          
+          {/* Language Selector */}
+          {settingsItems.map((item, index) => (
+            <Card key={`setting-${index}`} style={styles.menuCard}>
+              {item.component}
+            </Card>
+          ))}
+          
+          {/* Other Menu Items */}
           {menuItems.map((item, index) => (
             <Card key={index} style={styles.menuCard}>
               <TouchableOpacity style={styles.menuItem} onPress={item.onPress}>

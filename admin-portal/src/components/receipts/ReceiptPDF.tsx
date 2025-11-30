@@ -20,6 +20,13 @@ interface ReceiptData {
   endTime: string;
   confirmationNumber?: string;
   issueDate: Date;
+  // Payment information
+  paymentAmount: number;
+  servicePaymentAmount: number;
+  paymentStatus: string;
+  servicePaymentStatus: string;
+  paymentMethod?: string;
+  paymentTransactionId?: string;
 }
 
 interface ReceiptDocumentProps {
@@ -122,6 +129,65 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 2,
   },
+  paymentSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  paymentTable: {
+    border: '1 solid #E5E7EB',
+    borderRadius: 6,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottom: '1 solid #E5E7EB',
+    padding: 10,
+  },
+  tableRowLast: {
+    flexDirection: 'row',
+    padding: 10,
+  },
+  tableRowTotal: {
+    flexDirection: 'row',
+    padding: 10,
+    backgroundColor: '#F3F4F6',
+    fontFamily: 'Helvetica-Bold',
+  },
+  tableLabel: {
+    fontSize: 10,
+    color: '#1F2937',
+    width: '60%',
+  },
+  tableValue: {
+    fontSize: 10,
+    color: '#1F2937',
+    width: '40%',
+    textAlign: 'right',
+  },
+  tableLabelBold: {
+    fontSize: 11,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1F2937',
+    width: '60%',
+  },
+  tableValueBold: {
+    fontSize: 11,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1F2937',
+    width: '40%',
+    textAlign: 'right',
+  },
+  noteBox: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 15,
+    border: '1 solid #FCD34D',
+  },
+  noteText: {
+    fontSize: 9,
+    color: '#92400E',
+    lineHeight: 1.4,
+  },
 });
 
 const formatDate = (date: Date): string => {
@@ -223,6 +289,56 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({ receiptData })
         </View>
       </View>
 
+      {/* Payment Breakdown */}
+      <View style={styles.paymentSection}>
+        <Text style={styles.sectionTitle}>Payment Breakdown</Text>
+        <View style={styles.paymentTable}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Reservation Fee (Paid Online)</Text>
+            <Text style={styles.tableValue}>₹{receiptData.paymentAmount.toFixed(2)}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>GST (18%)</Text>
+            <Text style={styles.tableValue}>₹{(receiptData.paymentAmount * 0.18).toFixed(2)}</Text>
+          </View>
+          <View style={styles.tableRowTotal}>
+            <Text style={styles.tableLabelBold}>Total Paid</Text>
+            <Text style={styles.tableValueBold}>₹{(receiptData.paymentAmount * 1.18).toFixed(2)}</Text>
+          </View>
+          {receiptData.paymentMethod && (
+            <View style={styles.tableRowLast}>
+              <Text style={styles.tableLabel}>Payment Method</Text>
+              <Text style={styles.tableValue}>{receiptData.paymentMethod}</Text>
+            </View>
+          )}
+          {receiptData.paymentTransactionId && (
+            <View style={styles.tableRowLast}>
+              <Text style={styles.tableLabel}>Transaction ID</Text>
+              <Text style={styles.tableValue}>{receiptData.paymentTransactionId}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Service Payment Due */}
+        {receiptData.servicePaymentStatus === 'pending' && receiptData.servicePaymentAmount > 0 && (
+          <View style={styles.noteBox}>
+            <Text style={styles.noteText}>
+              ⚠️ Service Payment Due: ₹{receiptData.servicePaymentAmount.toFixed(2)} (to be paid at clinic)
+            </Text>
+            <Text style={styles.noteText}>
+              This amount includes the full service charge and will be collected at the time of your appointment.
+            </Text>
+          </View>
+        )}
+
+        {receiptData.servicePaymentStatus === 'paid' && (
+          <View style={styles.noteBox}>
+            <Text style={styles.noteText}>
+              ✓ Service Payment Completed: ₹{receiptData.servicePaymentAmount.toFixed(2)}
+            </Text>
+          </View>
+        )}
+      </View>
 
       {/* Company Info */}
       <View style={styles.companyInfo}>

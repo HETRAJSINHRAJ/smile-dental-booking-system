@@ -1,0 +1,90 @@
+{
+  "title": "Notifications",
+  "subtitle": "System notifications and alerts",
+  "tabs": {
+    "all": "All",
+    "unread": "Unread",
+    "appointments": "Appointments",
+    "payments": "Payments",
+    "system": "System"
+  },
+  "types": {
+    "newAppointment": "New Appointment",
+    "appointmentCancelled": "Appointment Cancelled",
+    "appointmentRescheduled": "Appointment Rescheduled",
+    "paymentReceived": "Payment Received",
+    "paymentFailed": "Payment Failed",
+    "refundRequested": "Refund Requested",
+    "newReview": "New Review",
+    "systemAlert": "System Alert"
+  },
+  "actions": {
+    "markAsRead": "Mark as read",
+    "markAsUnread": "Mark as unread",
+    "markAllAsRead": "Mark all as read",
+    "delete": "Delete",
+    "deleteAll": "Delete all",
+    "viewDetails": "View details"
+  },
+  "messages": {
+    "newAppointment": "New appointment booked by {{patientName}} for {{date}}",
+    "appointmentCancelled": "Appointment cancelled by {{patientName}} for {{date}}",
+    "appointmentRescheduled": "Appointment rescheduled by {{patientName}} to {{date}}",
+    "paymentReceived": "Payment of {{amount}} received for appointment {{confirmationNumber}}",
+    "paymentFailed": "Payment failed for appointment {{confirmationNumber}}",
+    "refundRequested": "Refund requested for appointment {{confirmationNumber}}",
+    "newReview": "New review submitted by {{patientName}} for {{providerName}}"
+  },
+  "empty": {
+    "noNotifications": "No notifications",
+    "noUnread": "No unread notifications",
+    "allCaughtUp": "You're all caught up!"
+  },
+  "email": {
+    "title": "Email Notifications",
+    "subtitle": "Manage email notification templates and settings",
+    "templates": {
+      "title": "Email Templates",
+      "appointmentConfirmation": "Appointment Confirmation",
+      "appointmentReminder": "Appointment Reminder",
+      "appointmentCancellation": "Appointment Cancellation",
+      "paymentReceipt": "Payment Receipt",
+      "welcomeEmail": "Welcome Email",
+      "passwordReset": "Password Reset"
+    },
+    "settings": {
+      "title": "Email Settings",
+      "fromName": "From Name",
+      "fromEmail": "From Email",
+      "replyTo": "Reply To",
+      "testEmail": "Send Test Email",
+      "saveSettings": "Save Settings"
+    }
+  },
+  "sms": {
+    "title": "SMS Notifications",
+    "subtitle": "Manage SMS notification templates and settings",
+    "templates": {
+      "title": "SMS Templates",
+      "appointmentConfirmation": "Appointment Confirmation",
+      "appointmentReminder": "Appointment Reminder",
+      "appointmentCancellation": "Appointment Cancellation"
+    },
+    "settings": {
+      "title": "SMS Settings",
+      "enabled": "Enable SMS notifications",
+      "testSMS": "Send Test SMS",
+      "saveSettings": "Save Settings"
+    }
+  },
+  "push": {
+    "title": "Push Notifications",
+    "subtitle": "Manage push notification settings",
+    "settings": {
+      "title": "Push Settings",
+      "enabled": "Enable push notifications",
+      "testPush": "Send Test Push",
+      "saveSettings": "Save Settings"
+    }
+  }
+}

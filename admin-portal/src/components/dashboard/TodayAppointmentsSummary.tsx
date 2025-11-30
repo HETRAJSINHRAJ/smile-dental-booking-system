@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getAllDocuments } from '@/lib/firebase/firestore';
-import type { Appointment } from '@/types/firebase';
+import type { Appointment } from '@/types/shared';
 import { Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
 

@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -28,7 +29,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | 'apple' | null>(null);
+  const { signIn, signInWithGoogle, signInWithFacebook, signInWithApple } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -42,6 +44,39 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       console.error('Login error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setSocialLoading('google');
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    setSocialLoading('facebook');
+    try {
+      await signInWithFacebook();
+    } catch (error) {
+      console.error('Facebook sign-in error:', error);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setSocialLoading('apple');
+    try {
+      await signInWithApple();
+    } catch (error) {
+      console.error('Apple sign-in error:', error);
+    } finally {
+      setSocialLoading(null);
     }
   };
 
@@ -111,14 +146,42 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
             {/* Social Login */}
             <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Icon name="logo-google" size={24} color={colors.text.primary} />
+              <TouchableOpacity 
+                style={styles.socialButton}
+                onPress={handleGoogleSignIn}
+                disabled={socialLoading !== null}
+              >
+                {socialLoading === 'google' ? (
+                  <ActivityIndicator size="small" color={colors.secondary[500]} />
+                ) : (
+                  <Icon name="logo-google" size={24} color={colors.text.primary} />
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Icon name="logo-apple" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Icon name="logo-facebook" size={24} color={colors.text.primary} />
+              
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={handleAppleSignIn}
+                  disabled={socialLoading !== null}
+                >
+                  {socialLoading === 'apple' ? (
+                    <ActivityIndicator size="small" color={colors.secondary[500]} />
+                  ) : (
+                    <Icon name="logo-apple" size={24} color={colors.text.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity 
+                style={styles.socialButton}
+                onPress={handleFacebookSignIn}
+                disabled={socialLoading !== null}
+              >
+                {socialLoading === 'facebook' ? (
+                  <ActivityIndicator size="small" color={colors.secondary[500]} />
+                ) : (
+                  <Icon name="logo-facebook" size={24} color={colors.text.primary} />
+                )}
               </TouchableOpacity>
             </View>
           </View>

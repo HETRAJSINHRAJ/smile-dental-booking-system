@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getAllDocuments } from '@/lib/firebase/firestore';
-import type { UserProfile } from '@/types/firebase';
+import type { UserProfile } from '@/types/shared';
 import { toast } from 'sonner';
 
 export default function PatientRecordsPage() {

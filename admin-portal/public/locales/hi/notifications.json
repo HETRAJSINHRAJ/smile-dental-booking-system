@@ -1,0 +1,90 @@
+{
+  "title": "सूचनाएं",
+  "subtitle": "सिस्टम सूचनाएं और अलर्ट",
+  "tabs": {
+    "all": "सभी",
+    "unread": "अपठित",
+    "appointments": "अपॉइंटमेंट",
+    "payments": "भुगतान",
+    "system": "सिस्टम"
+  },
+  "types": {
+    "newAppointment": "नया अपॉइंटमेंट",
+    "appointmentCancelled": "अपॉइंटमेंट रद्द",
+    "appointmentRescheduled": "अपॉइंटमेंट पुनर्निर्धारित",
+    "paymentReceived": "भुगतान प्राप्त",
+    "paymentFailed": "भुगतान विफल",
+    "refundRequested": "रिफंड अनुरोध",
+    "newReview": "नई समीक्षा",
+    "systemAlert": "सिस्टम अलर्ट"
+  },
+  "actions": {
+    "markAsRead": "पढ़ा हुआ चिह्नित करें",
+    "markAsUnread": "अपठित चिह्नित करें",
+    "markAllAsRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "delete": "हटाएं",
+    "deleteAll": "सभी हटाएं",
+    "viewDetails": "विवरण देखें"
+  },
+  "messages": {
+    "newAppointment": "{{patientName}} द्वारा {{date}} के लिए नया अपॉइंटमेंट बुक किया गया",
+    "appointmentCancelled": "{{patientName}} द्वारा {{date}} का अपॉइंटमेंट रद्द किया गया",
+    "appointmentRescheduled": "{{patientName}} द्वारा अपॉइंटमेंट {{date}} को पुनर्निर्धारित किया गया",
+    "paymentReceived": "अपॉइंटमेंट {{confirmationNumber}} के लिए {{amount}} का भुगतान प्राप्त हुआ",
+    "paymentFailed": "अपॉइंटमेंट {{confirmationNumber}} के लिए भुगतान विफल रहा",
+    "refundRequested": "अपॉइंटमेंट {{confirmationNumber}} के लिए रिफंड अनुरोध किया गया",
+    "newReview": "{{patientName}} द्वारा {{providerName}} के लिए नई समीक्षा सबमिट की गई"
+  },
+  "empty": {
+    "noNotifications": "कोई सूचना नहीं",
+    "noUnread": "कोई अपठित सूचना नहीं",
+    "allCaughtUp": "आप सभी अपडेट हैं!"
+  },
+  "email": {
+    "title": "ईमेल सूचनाएं",
+    "subtitle": "ईमेल सूचना टेम्पलेट और सेटिंग्स प्रबंधित करें",
+    "templates": {
+      "title": "ईमेल टेम्पलेट",
+      "appointmentConfirmation": "अपॉइंटमेंट पुष्टि",
+      "appointmentReminder": "अपॉइंटमेंट रिमाइंडर",
+      "appointmentCancellation": "अपॉइंटमेंट रद्दीकरण",
+      "paymentReceipt": "भुगतान रसीद",
+      "welcomeEmail": "स्वागत ईमेल",
+      "passwordReset": "पासवर्ड रीसेट"
+    },
+    "settings": {
+      "title": "ईमेल सेटिंग्स",
+      "fromName": "प्रेषक का नाम",
+      "fromEmail": "प्रेषक का ईमेल",
+      "replyTo": "उत्तर दें",
+      "testEmail": "परीक्षण ईमेल भेजें",
+      "saveSettings": "सेटिंग्स सहेजें"
+    }
+  },
+  "sms": {
+    "title": "एसएमएस सूचनाएं",
+    "subtitle": "एसएमएस सूचना टेम्पलेट और सेटिंग्स प्रबंधित करें",
+    "templates": {
+      "title": "एसएमएस टेम्पलेट",
+      "appointmentConfirmation": "अपॉइंटमेंट पुष्टि",
+      "appointmentReminder": "अपॉइंटमेंट रिमाइंडर",
+      "appointmentCancellation": "अपॉइंटमेंट रद्दीकरण"
+    },
+    "settings": {
+      "title": "एसएमएस सेटिंग्स",
+      "enabled": "एसएमएस सूचनाएं सक्षम करें",
+      "testSMS": "परीक्षण एसएमएस भेजें",
+      "saveSettings": "सेटिंग्स सहेजें"
+    }
+  },
+  "push": {
+    "title": "पुश सूचनाएं",
+    "subtitle": "पुश सूचना सेटिंग्स प्रबंधित करें",
+    "settings": {
+      "title": "पुश सेटिंग्स",
+      "enabled": "पुश सूचनाएं सक्षम करें",
+      "testPush": "परीक्षण पुश भेजें",
+      "saveSettings": "सेटिंग्स सहेजें"
+    }
+  }
+}

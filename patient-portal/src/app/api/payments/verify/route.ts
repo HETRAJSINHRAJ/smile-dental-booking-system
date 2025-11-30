@@ -1,17 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { z } from 'zod';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/ratelimit';
+import { validateInput, formatZodErrors } from '@/lib/validation';
+
+// Zod schema for payment verification request
+const verifyPaymentSchema = z.object({
+  paymentId: z.string().min(1, 'Payment ID is required'),
+  orderId: z.string().min(1, 'Order ID is required'),
+  signature: z.string().min(1, 'Signature is required'),
+  amount: z.number().positive().optional(),
+  gateway: z.enum(['razorpay']).default('razorpay'),
+  userId: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { paymentId, orderId, signature, amount, gateway } = body;
 
-    // Validate required fields
-    if (!paymentId || !orderId) {
+    // Validate input using Zod schema
+    const validation = validateInput(verifyPaymentSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: paymentId, orderId' },
+        { 
+          error: 'Validation failed', 
+          details: formatZodErrors(validation.errors!) 
+        },
         { status: 400 }
       );
+    }
+
+    const { paymentId, orderId, signature, gateway, userId } = validation.data!;
+
+    // Apply rate limiting (3 attempts per hour per user)
+    const rateLimitIdentifier = userId || orderId || 'anonymous';
+    const { allowed, response, result } = await rateLimitMiddleware(
+      request,
+      'payments',
+      rateLimitIdentifier
+    );
+    
+    if (!allowed && response) {
+      return response;
     }
 
     // Only Razorpay verification implemented for now
@@ -32,12 +62,17 @@ export async function POST(request: NextRequest) {
       isVerified = false;
     }
     
-    return NextResponse.json({ 
+    const successResponse = NextResponse.json({ 
       verified: isVerified,
       paymentId,
       orderId,
       message: isVerified ? 'Payment verified successfully' : 'Payment verification failed'
     });
+    
+    // Add rate limit headers to successful response
+    addRateLimitHeaders(successResponse, result);
+    
+    return successResponse;
 
   } catch (error) {
     console.error('Error verifying payment:', error);

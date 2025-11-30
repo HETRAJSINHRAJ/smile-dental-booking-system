@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { getAllDocuments } from '@/lib/firebase/firestore';
-import type { Appointment } from '@/types/firebase';
+import type { Appointment } from '@/types/shared';
 import { toast } from 'sonner';
 
 export default function CancelledAppointmentsPage() {

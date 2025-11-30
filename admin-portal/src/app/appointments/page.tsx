@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/standardized-dialog';
 import { Badge } from '@/components/ui/badge';
 import { getAllDocuments, updateAppointment, getDocument } from '@/lib/firebase/firestore';
-import type { Appointment, UserProfile } from '@/types/firebase';
+import type { Appointment, UserProfile } from '@/types/shared';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 import TodayAppointments from '@/components/appointments/TodayAppointments';
@@ -157,25 +157,74 @@ export default function AppointmentsPage() {
         });
 
         if (newStatus === 'confirmed') {
-          // Send confirmation notification
-          await sendAppointmentConfirmation(appointment.userId, {
-            serviceName: appointment.serviceName,
-            providerName: appointment.providerName,
-            date: formattedDate,
-            time: appointment.startTime,
-            appointmentId: appointment.id,
-          });
-          toast.success('Appointment confirmed and notification sent! 🔔');
+          // Send confirmation notification via API
+          try {
+            await fetch('/api/notifications/appointment-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: appointment.userId,
+                type: 'confirmation',
+                appointmentDetails: {
+                  serviceName: appointment.serviceName,
+                  providerName: appointment.providerName,
+                  date: formattedDate,
+                  time: appointment.startTime,
+                  appointmentId: appointment.id,
+                },
+              }),
+            });
+            toast.success('Appointment confirmed and notification sent! 🔔');
+          } catch (error) {
+            console.error('Error sending notification:', error);
+            toast.success('Appointment confirmed!');
+          }
         } else if (newStatus === 'cancelled') {
-          // Send cancellation notification
-          await sendAppointmentCancellation(appointment.userId, {
-            serviceName: appointment.serviceName,
-            providerName: appointment.providerName,
-            date: formattedDate,
-            time: appointment.startTime,
-            appointmentId: appointment.id,
-          });
-          toast.success('Appointment cancelled and notification sent! 🔔');
+          // Send cancellation notification via API
+          try {
+            await fetch('/api/notifications/appointment-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: appointment.userId,
+                type: 'cancellation',
+                appointmentDetails: {
+                  serviceName: appointment.serviceName,
+                  providerName: appointment.providerName,
+                  date: formattedDate,
+                  time: appointment.startTime,
+                  appointmentId: appointment.id,
+                },
+              }),
+            });
+          } catch (error) {
+            console.error('Error sending notification:', error);
+          }
+          
+          // Notify waitlist users about the available slot via API
+          try {
+            const response = await fetch('/api/waitlist/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                providerId: appointment.providerId,
+                serviceId: appointment.serviceId,
+                appointmentDate: appointmentDate.toISOString(),
+                availableTime: appointment.startTime,
+              }),
+            });
+            
+            const data = await response.json();
+            
+            if (data.notified) {
+              toast.success('Appointment cancelled, notifications sent, and waitlist user notified! 🔔');
+            } else {
+              toast.success('Appointment cancelled and notification sent! 🔔');
+            }
+          } catch (error) {
+            console.error('Error notifying waitlist:', error);
+            toast.success('Appointment cancelled and notification sent! 🔔');
+          }           
         } else {
           toast.success(`Appointment ${newStatus} successfully`);
         }

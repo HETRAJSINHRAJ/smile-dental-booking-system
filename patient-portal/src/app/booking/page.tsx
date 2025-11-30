@@ -6,8 +6,9 @@ import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Clock, Loader2, ArrowRight, Search } from "lucide-react";
-import { Service } from "@/types/firebase";
+import { Service } from "@/types/shared";
 import { useCurrency } from "@/lib/localization/useCurrency";
+import { analyticsService } from "@/lib/analytics/analyticsService";
 
 export default function SelectServicePage() {
   const router = useRouter();
@@ -124,6 +125,9 @@ export default function SelectServicePage() {
   });
 
   const handleServiceSelect = (service: Service) => {
+    // Track booking started event
+    analyticsService.trackBookingStarted(service.id, service.name);
+    
     // If not logged in, redirect to login with return URL
     if (!user) {
       router.push(

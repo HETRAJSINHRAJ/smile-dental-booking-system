@@ -1,0 +1,137 @@
+{
+  "title": "Appointments Management",
+  "subtitle": "View and manage all appointments",
+  "tabs": {
+    "all": "All",
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noShow": "No Show"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noShow": "No Show",
+    "rescheduled": "Rescheduled"
+  },
+  "details": {
+    "title": "Appointment Details",
+    "confirmationNumber": "Confirmation Number",
+    "patient": "Patient",
+    "service": "Service",
+    "provider": "Provider",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "status": "Status",
+    "notes": "Patient Notes",
+    "adminNotes": "Admin Notes",
+    "paymentStatus": "Payment Status",
+    "reservationFee": "Reservation Fee",
+    "serviceFee": "Service Fee",
+    "totalPaid": "Total Paid",
+    "amountDue": "Amount Due",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At"
+  },
+  "actions": {
+    "confirm": "Confirm Appointment",
+    "complete": "Mark as Completed",
+    "cancel": "Cancel Appointment",
+    "markNoShow": "Mark as No Show",
+    "reschedule": "Reschedule",
+    "viewReceipt": "View Receipt",
+    "regenerateReceipt": "Regenerate Receipt",
+    "recordPayment": "Record Service Payment",
+    "issueRefund": "Issue Refund",
+    "sendReminder": "Send Reminder",
+    "editNotes": "Edit Notes",
+    "viewPatient": "View Patient Profile",
+    "viewProvider": "View Provider Profile"
+  },
+  "filters": {
+    "title": "Filter Appointments",
+    "dateRange": "Date Range",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "status": "Status",
+    "provider": "Provider",
+    "service": "Service",
+    "patient": "Patient",
+    "confirmationNumber": "Confirmation Number",
+    "applyFilters": "Apply Filters",
+    "clearFilters": "Clear Filters",
+    "exportResults": "Export Results"
+  },
+  "search": {
+    "placeholder": "Search by patient name, email, confirmation number...",
+    "noResults": "No appointments found",
+    "searching": "Searching..."
+  },
+  "reschedule": {
+    "title": "Reschedule Appointment",
+    "subtitle": "Select a new date and time",
+    "reason": "Reason for rescheduling",
+    "notifyPatient": "Send notification to patient",
+    "history": "Reschedule History",
+    "confirmReschedule": "Confirm Reschedule",
+    "success": "Appointment rescheduled successfully",
+    "failed": "Failed to reschedule appointment"
+  },
+  "cancel": {
+    "title": "Cancel Appointment",
+    "subtitle": "Are you sure you want to cancel this appointment?",
+    "reason": "Reason for cancellation",
+    "notifyPatient": "Send notification to patient",
+    "processRefund": "Process refund",
+    "confirmCancel": "Confirm Cancellation",
+    "success": "Appointment cancelled successfully",
+    "failed": "Failed to cancel appointment"
+  },
+  "payment": {
+    "recordTitle": "Record Service Payment",
+    "amount": "Amount",
+    "method": "Payment Method",
+    "cash": "Cash",
+    "card": "Card",
+    "upi": "UPI",
+    "other": "Other",
+    "transactionId": "Transaction ID",
+    "notes": "Notes",
+    "recordPayment": "Record Payment",
+    "success": "Payment recorded successfully",
+    "failed": "Failed to record payment"
+  },
+  "refund": {
+    "title": "Issue Refund",
+    "amount": "Refund Amount",
+    "reason": "Reason for refund",
+    "method": "Refund Method",
+    "original": "Original Payment Method",
+    "manual": "Manual Refund",
+    "notifyPatient": "Send notification to patient",
+    "confirmRefund": "Confirm Refund",
+    "processing": "Processing refund...",
+    "success": "Refund processed successfully",
+    "failed": "Failed to process refund"
+  },
+  "stats": {
+    "total": "Total Appointments",
+    "today": "Today's Appointments",
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noShow": "No Show",
+    "revenue": "Total Revenue",
+    "pendingPayments": "Pending Payments"
+  },
+  "empty": {
+    "noAppointments": "No appointments found",
+    "noResults": "No results match your filters",
+    "createFirst": "Create your first appointment"
+  }
+}

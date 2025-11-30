@@ -28,7 +28,7 @@ import {
   createDocument,
   getAvailableTimeSlots
 } from '@/lib/firebase/firestore';
-import type { Service, Provider, UserProfile } from '@/types/firebase';
+import type { Service, Provider, UserProfile } from '@/types/shared';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 

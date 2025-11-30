@@ -6,72 +6,177 @@ import {
   Switch,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../contexts/AuthContextWithToast';
+import { NotificationPreferences as NotificationPreferencesType } from '../types/firebase';
 
-interface Preferences {
-  appointmentReminders: boolean;
-  appointmentUpdates: boolean;
-  paymentUpdates: boolean;
-  promotional: boolean;
-  pushNotifications: boolean;
-}
+const defaultPreferences: Omit<NotificationPreferencesType, 'userId' | 'updatedAt'> = {
+  email: {
+    enabled: true,
+    appointmentReminders: true,
+    appointmentUpdates: true,
+    paymentUpdates: true,
+    promotional: false,
+  },
+  sms: {
+    enabled: false,
+    appointmentReminders: false,
+    appointmentUpdates: false,
+    paymentUpdates: false,
+  },
+  push: {
+    enabled: true,
+    appointmentReminders: true,
+    appointmentUpdates: true,
+    paymentUpdates: true,
+    promotional: false,
+  },
+  quietHours: {
+    enabled: false,
+    start: '22:00',
+    end: '08:00',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  },
+  language: 'en',
+};
 
 export const NotificationPreferences: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [preferences, setPreferences] = useState<Preferences>({
-    appointmentReminders: true,
-    appointmentUpdates: true,
-    paymentUpdates: true,
-    promotional: false,
-    pushNotifications: true,
-  });
+  const [preferences, setPreferences] = useState<Omit<NotificationPreferencesType, 'userId' | 'updatedAt'>>(defaultPreferences);
 
   useEffect(() => {
-    loadPreferences();
+    if (!user?.uid) return;
+
+    // Set up real-time listener for notification preferences
+    const unsubscribe = firestore()
+      .collection('notificationPreferences')
+      .doc(user.uid)
+      .onSnapshot(
+        (doc) => {
+          if (doc.exists) {
+            const data = doc.data() as NotificationPreferencesType;
+            setPreferences({
+              email: data.email,
+              sms: data.sms,
+              push: data.push,
+              quietHours: data.quietHours,
+              language: data.language,
+            });
+            console.log('✅ Notification preferences updated from Firestore');
+          }
+          setLoading(false);
+        },
+        (error) => {
+          console.error('❌ Error listening to preferences:', error);
+          // Fallback to one-time fetch on error
+          loadPreferences();
+        }
+      );
+
+    return () => unsubscribe();
   }, [user?.uid]);
 
   const loadPreferences = async () => {
     if (!user?.uid) return;
 
     try {
+      // Enable offline persistence and get from cache first
       const doc = await firestore()
         .collection('notificationPreferences')
         .doc(user.uid)
-        .get();
+        .get({ source: 'default' }); // Try cache first, then server
 
       if (doc.exists) {
-        setPreferences(doc.data() as Preferences);
+        const data = doc.data() as NotificationPreferencesType;
+        setPreferences({
+          email: data.email,
+          sms: data.sms,
+          push: data.push,
+          quietHours: data.quietHours,
+          language: data.language,
+        });
+        console.log('✅ Notification preferences loaded', doc.metadata.fromCache ? '(from cache)' : '(from server)');
       }
     } catch (error) {
-      console.error('Error loading preferences:', error);
+      console.error('❌ Error loading preferences:', error);
+      // Keep default preferences on error
     } finally {
       setLoading(false);
     }
   };
 
-  const updatePreference = async (key: keyof Preferences, value: boolean) => {
+  const savePreferences = async (newPreferences: typeof preferences) => {
     if (!user?.uid) return;
 
     setSaving(true);
     try {
-      const newPreferences = { ...preferences, [key]: value };
-      setPreferences(newPreferences);
-
+      // Save to Firestore with offline persistence
       await firestore()
         .collection('notificationPreferences')
         .doc(user.uid)
-        .set(newPreferences, { merge: true });
-    } catch (error) {
-      console.error('Error updating preference:', error);
-      // Revert on error
-      setPreferences(preferences);
+        .set(
+          {
+            userId: user.uid,
+            ...newPreferences,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      console.log('✅ Notification preferences saved');
+    } catch (error: any) {
+      console.error('❌ Error saving preferences:', error);
+      
+      // Check if it's an offline error
+      if (error.code === 'unavailable') {
+        console.log('📴 Offline - preferences will sync when online');
+        // Don't revert - let offline persistence handle it
+      } else {
+        // Revert on other errors
+        await loadPreferences();
+      }
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateEmailPreference = (key: keyof NotificationPreferencesType['email'], value: boolean) => {
+    const newPreferences = {
+      ...preferences,
+      email: { ...preferences.email, [key]: value },
+    };
+    setPreferences(newPreferences);
+    savePreferences(newPreferences);
+  };
+
+  const updateSmsPreference = (key: keyof NotificationPreferencesType['sms'], value: boolean) => {
+    const newPreferences = {
+      ...preferences,
+      sms: { ...preferences.sms, [key]: value },
+    };
+    setPreferences(newPreferences);
+    savePreferences(newPreferences);
+  };
+
+  const updatePushPreference = (key: keyof NotificationPreferencesType['push'], value: boolean) => {
+    const newPreferences = {
+      ...preferences,
+      push: { ...preferences.push, [key]: value },
+    };
+    setPreferences(newPreferences);
+    savePreferences(newPreferences);
+  };
+
+  const updateQuietHours = (key: keyof NotificationPreferencesType['quietHours'], value: string | boolean) => {
+    const newPreferences = {
+      ...preferences,
+      quietHours: { ...preferences.quietHours, [key]: value },
+    };
+    setPreferences(newPreferences);
+    savePreferences(newPreferences);
   };
 
   if (loading) {
@@ -84,100 +189,286 @@ export const NotificationPreferences: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Email Notifications */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notification Preferences</Text>
+        <Text style={styles.sectionTitle}>📧 Email Notifications</Text>
         <Text style={styles.sectionDescription}>
-          Choose what notifications you want to receive
+          Manage your email notification preferences
         </Text>
       </View>
 
       <View style={styles.preferenceItem}>
         <View style={styles.preferenceInfo}>
-          <Text style={styles.preferenceTitle}>Push Notifications</Text>
+          <Text style={styles.preferenceTitle}>Enable Email Notifications</Text>
           <Text style={styles.preferenceDescription}>
-            Enable or disable all push notifications
+            Receive notifications via email
           </Text>
         </View>
         <Switch
-          value={preferences.pushNotifications}
-          onValueChange={value => updatePreference('pushNotifications', value)}
+          value={preferences.email.enabled}
+          onValueChange={value => updateEmailPreference('enabled', value)}
           disabled={saving}
           trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
-          thumbColor={preferences.pushNotifications ? '#6366F1' : '#F3F4F6'}
+          thumbColor={preferences.email.enabled ? '#6366F1' : '#F3F4F6'}
         />
       </View>
 
-      <View style={styles.divider} />
+      {preferences.email.enabled && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Appointment Reminders</Text>
+            </View>
+            <Switch
+              value={preferences.email.appointmentReminders}
+              onValueChange={value => updateEmailPreference('appointmentReminders', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.email.appointmentReminders ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Appointment Updates</Text>
+            </View>
+            <Switch
+              value={preferences.email.appointmentUpdates}
+              onValueChange={value => updateEmailPreference('appointmentUpdates', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.email.appointmentUpdates ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Payment Updates</Text>
+            </View>
+            <Switch
+              value={preferences.email.paymentUpdates}
+              onValueChange={value => updateEmailPreference('paymentUpdates', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.email.paymentUpdates ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Promotional Emails</Text>
+            </View>
+            <Switch
+              value={preferences.email.promotional}
+              onValueChange={value => updateEmailPreference('promotional', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.email.promotional ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+        </>
+      )}
+
+      {/* SMS Notifications */}
+      <View style={[styles.section, styles.sectionMarginTop]}>
+        <Text style={styles.sectionTitle}>💬 SMS Notifications</Text>
+        <Text style={styles.sectionDescription}>
+          Manage your SMS notification preferences
+        </Text>
+      </View>
 
       <View style={styles.preferenceItem}>
         <View style={styles.preferenceInfo}>
-          <Text style={styles.preferenceTitle}>Appointment Reminders</Text>
+          <Text style={styles.preferenceTitle}>Enable SMS Notifications</Text>
           <Text style={styles.preferenceDescription}>
-            Get reminded about upcoming appointments
+            Receive notifications via SMS
           </Text>
         </View>
         <Switch
-          value={preferences.appointmentReminders}
-          onValueChange={value => updatePreference('appointmentReminders', value)}
-          disabled={saving || !preferences.pushNotifications}
+          value={preferences.sms.enabled}
+          onValueChange={value => updateSmsPreference('enabled', value)}
+          disabled={saving}
           trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
-          thumbColor={preferences.appointmentReminders ? '#6366F1' : '#F3F4F6'}
+          thumbColor={preferences.sms.enabled ? '#6366F1' : '#F3F4F6'}
         />
       </View>
 
-      <View style={styles.divider} />
+      {preferences.sms.enabled && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Appointment Reminders</Text>
+            </View>
+            <Switch
+              value={preferences.sms.appointmentReminders}
+              onValueChange={value => updateSmsPreference('appointmentReminders', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.sms.appointmentReminders ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Appointment Updates</Text>
+            </View>
+            <Switch
+              value={preferences.sms.appointmentUpdates}
+              onValueChange={value => updateSmsPreference('appointmentUpdates', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.sms.appointmentUpdates ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Payment Updates</Text>
+            </View>
+            <Switch
+              value={preferences.sms.paymentUpdates}
+              onValueChange={value => updateSmsPreference('paymentUpdates', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.sms.paymentUpdates ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+        </>
+      )}
+
+      {/* Push Notifications */}
+      <View style={[styles.section, styles.sectionMarginTop]}>
+        <Text style={styles.sectionTitle}>📱 Push Notifications</Text>
+        <Text style={styles.sectionDescription}>
+          Manage your push notification preferences
+        </Text>
+      </View>
 
       <View style={styles.preferenceItem}>
         <View style={styles.preferenceInfo}>
-          <Text style={styles.preferenceTitle}>Appointment Updates</Text>
+          <Text style={styles.preferenceTitle}>Enable Push Notifications</Text>
           <Text style={styles.preferenceDescription}>
-            Notifications about appointment confirmations and changes
+            Receive notifications on your device
           </Text>
         </View>
         <Switch
-          value={preferences.appointmentUpdates}
-          onValueChange={value => updatePreference('appointmentUpdates', value)}
-          disabled={saving || !preferences.pushNotifications}
+          value={preferences.push.enabled}
+          onValueChange={value => updatePushPreference('enabled', value)}
+          disabled={saving}
           trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
-          thumbColor={preferences.appointmentUpdates ? '#6366F1' : '#F3F4F6'}
+          thumbColor={preferences.push.enabled ? '#6366F1' : '#F3F4F6'}
         />
       </View>
 
-      <View style={styles.divider} />
+      {preferences.push.enabled && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Appointment Reminders</Text>
+            </View>
+            <Switch
+              value={preferences.push.appointmentReminders}
+              onValueChange={value => updatePushPreference('appointmentReminders', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.push.appointmentReminders ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Appointment Updates</Text>
+            </View>
+            <Switch
+              value={preferences.push.appointmentUpdates}
+              onValueChange={value => updatePushPreference('appointmentUpdates', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.push.appointmentUpdates ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Payment Updates</Text>
+            </View>
+            <Switch
+              value={preferences.push.paymentUpdates}
+              onValueChange={value => updatePushPreference('paymentUpdates', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.push.paymentUpdates ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Promotional Notifications</Text>
+            </View>
+            <Switch
+              value={preferences.push.promotional}
+              onValueChange={value => updatePushPreference('promotional', value)}
+              disabled={saving}
+              trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
+              thumbColor={preferences.push.promotional ? '#6366F1' : '#F3F4F6'}
+            />
+          </View>
+        </>
+      )}
+
+      {/* Quiet Hours */}
+      <View style={[styles.section, styles.sectionMarginTop]}>
+        <Text style={styles.sectionTitle}>🌙 Quiet Hours</Text>
+        <Text style={styles.sectionDescription}>
+          Set times when you don't want to receive notifications
+        </Text>
+      </View>
 
       <View style={styles.preferenceItem}>
         <View style={styles.preferenceInfo}>
-          <Text style={styles.preferenceTitle}>Payment Updates</Text>
+          <Text style={styles.preferenceTitle}>Enable Quiet Hours</Text>
           <Text style={styles.preferenceDescription}>
-            Notifications about payment status and receipts
+            Pause notifications during specific hours
           </Text>
         </View>
         <Switch
-          value={preferences.paymentUpdates}
-          onValueChange={value => updatePreference('paymentUpdates', value)}
-          disabled={saving || !preferences.pushNotifications}
+          value={preferences.quietHours.enabled}
+          onValueChange={value => updateQuietHours('enabled', value)}
+          disabled={saving}
           trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
-          thumbColor={preferences.paymentUpdates ? '#6366F1' : '#F3F4F6'}
+          thumbColor={preferences.quietHours.enabled ? '#6366F1' : '#F3F4F6'}
         />
       </View>
 
-      <View style={styles.divider} />
+      {preferences.quietHours.enabled && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceTitle}>Quiet Hours Period</Text>
+              <Text style={styles.preferenceDescription}>
+                {preferences.quietHours.start} - {preferences.quietHours.end}
+              </Text>
+              <Text style={styles.preferenceNote}>
+                Note: Time picker UI can be added in future enhancement
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
 
-      <View style={styles.preferenceItem}>
-        <View style={styles.preferenceInfo}>
-          <Text style={styles.preferenceTitle}>Promotional</Text>
-          <Text style={styles.preferenceDescription}>
-            Special offers and promotional messages
-          </Text>
-        </View>
-        <Switch
-          value={preferences.promotional}
-          onValueChange={value => updatePreference('promotional', value)}
-          disabled={saving || !preferences.pushNotifications}
-          trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
-          thumbColor={preferences.promotional ? '#6366F1' : '#F3F4F6'}
-        />
-      </View>
+      <View style={styles.bottomPadding} />
     </ScrollView>
   );
 };
@@ -195,7 +486,10 @@ const styles = StyleSheet.create({
   section: {
     padding: 16,
     backgroundColor: '#FFF',
-    marginBottom: 8,
+    marginBottom: 1,
+  },
+  sectionMarginTop: {
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
@@ -228,9 +522,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+  preferenceNote: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
   divider: {
     height: 1,
     backgroundColor: '#E5E7EB',
     marginLeft: 16,
+  },
+  bottomPadding: {
+    height: 32,
   },
 });

@@ -23,7 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { createDocument, getServices, getProviders } from '@/lib/firebase/firestore';
-import type { UserProfile, Service, Provider } from '@/types/firebase';
+import type { UserProfile, Service, Provider } from '@/types/shared';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 

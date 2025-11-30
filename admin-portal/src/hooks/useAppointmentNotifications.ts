@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAllDocuments } from '@/lib/firebase/firestore';
-import type { Appointment } from '@/types/firebase';
+import type { Appointment } from '@/types/shared';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 

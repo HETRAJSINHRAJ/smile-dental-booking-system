@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,9 +24,14 @@ import {
   AlertCircle,
   Info,
   Receipt,
+  Star,
 } from 'lucide-react';
 import Image from 'next/image';
-import type { Appointment } from '@/types/firebase';
+import type { Appointment } from '@/types/shared';
+import { ReviewForm } from '@/components/reviews/ReviewForm';
+import { useAuth } from '@/contexts/AuthContext';
+import reviewService from '@/lib/reviews/reviewService';
+import type { Review } from '@/types/review';
 
 
 interface AppointmentsSectionProps {
@@ -41,6 +46,9 @@ interface AppointmentGroup {
 }
 
 export function AppointmentsSection({ appointments }: AppointmentsSectionProps) {
+  const { user } = useAuth();
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [groups, setGroups] = useState<AppointmentGroup[]>(() => {
     // Sort all appointments by date first
     const sorted = [...appointments].sort((a, b) => {
@@ -86,7 +94,18 @@ export function AppointmentsSection({ appointments }: AppointmentsSectionProps) 
   });
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [activeTab, setActiveTab] = useState<'reservation' | 'bill'>('reservation');
+  const [activeTab, setActiveTab] = useState<'reservation' | 'bill' | 'review'>('reservation');
+
+  // Check if user has already reviewed the selected appointment
+  useEffect(() => {
+    const checkExistingReview = async () => {
+      if (selectedAppointment && user) {
+        const review = await reviewService.getReviewByAppointment(user.uid, selectedAppointment.id);
+        setExistingReview(review);
+      }
+    };
+    checkExistingReview();
+  }, [selectedAppointment, user]);
 
   const toggleGroup = (index: number) => {
     setGroups(prev => prev.map((group, i) =>
@@ -280,10 +299,16 @@ export function AppointmentsSection({ appointments }: AppointmentsSectionProps) 
                 </DialogTitle>
               </DialogHeader>
 
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'reservation' | 'bill')}>
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'reservation' | 'bill' | 'review')}>
+                <TabsList className={`grid w-full ${selectedAppointment.status === 'completed' ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="reservation">Reservation detail</TabsTrigger>
                   <TabsTrigger value="bill">Bill detail</TabsTrigger>
+                  {selectedAppointment.status === 'completed' && (
+                    <TabsTrigger value="review">
+                      <Star className="h-4 w-4 mr-1" />
+                      Review
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
                 <TabsContent value="reservation" className="space-y-6 mt-6">
@@ -443,9 +468,9 @@ export function AppointmentsSection({ appointments }: AppointmentsSectionProps) 
                           </div>
                         </div>
 
-                        {/* Receipt Button */}
-                        {selectedAppointment.receiptUrl && (
-                          <div className="border-t pt-4 mt-4">
+                        {/* Receipt Section - View Only for Patients */}
+                        <div className="border-t pt-4 mt-4">
+                          {selectedAppointment.receiptUrl ? (
                             <Button 
                               onClick={() => window.open(selectedAppointment.receiptUrl, '_blank')}
                               className="w-full"
@@ -454,11 +479,96 @@ export function AppointmentsSection({ appointments }: AppointmentsSectionProps) 
                               <Receipt className="h-4 w-4 mr-2" />
                               View Receipt
                             </Button>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="text-center py-3 text-sm text-muted-foreground">
+                              <Receipt className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Receipt not yet generated</p>
+                              <p className="text-xs mt-1">Your receipt will be available after payment confirmation</p>
+                            </div>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="review" className="space-y-6 mt-6">
+                  {existingReview ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">Your Review</h4>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            existingReview.status === 'approved' ? 'bg-green-50 text-green-700' :
+                            existingReview.status === 'rejected' ? 'bg-red-50 text-red-700' :
+                            'bg-yellow-50 text-yellow-700'
+                          }
+                        >
+                          {existingReview.status === 'approved' ? 'Approved' :
+                           existingReview.status === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                        </Badge>
+                      </div>
+
+                      <Card>
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-5 h-5 ${
+                                  star <= existingReview.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-sm">{existingReview.comment}</p>
+                          <div className="text-xs text-muted-foreground">
+                            Submitted on {existingReview.createdAt.toDate().toLocaleDateString()}
+                          </div>
+
+                          {existingReview.response && (
+                            <div className="mt-4 p-3 bg-muted rounded-lg">
+                              <div className="text-sm font-semibold mb-1">Response from {selectedAppointment.providerName}</div>
+                              <p className="text-sm text-muted-foreground">{existingReview.response}</p>
+                              {existingReview.respondedAt && (
+                                <div className="text-xs text-muted-foreground mt-2">
+                                  Responded on {existingReview.respondedAt.toDate().toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold mb-2">Share Your Experience</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Help others by sharing your experience with {selectedAppointment.providerName}
+                        </p>
+                      </div>
+
+                      {user && (
+                        <ReviewForm
+                          userId={user.uid}
+                          userName={selectedAppointment.userName}
+                          userEmail={selectedAppointment.userEmail}
+                          providerId={selectedAppointment.providerId}
+                          providerName={selectedAppointment.providerName}
+                          appointmentId={selectedAppointment.id}
+                          onSuccess={() => {
+                            setShowReviewForm(false);
+                            // Refresh the review status
+                            reviewService.getReviewByAppointment(user.uid, selectedAppointment.id).then(setExistingReview);
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </>

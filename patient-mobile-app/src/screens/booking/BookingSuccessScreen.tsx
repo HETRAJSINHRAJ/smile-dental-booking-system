@@ -21,7 +21,6 @@ import { Card } from '../../components/Card';
 import { getDocument } from '../../lib/firestore';
 import { Appointment, Service, Provider } from '../../types/firebase';
 import { PDFDownloadManager } from '../../utils/pdfDownloadManager';
-import { ReceiptPDFGenerator } from '../../utils/receiptPDFGenerator';
 
 type BookingSuccessScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -113,19 +112,23 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
 
+    // Check if receipt is already generated
+    if (!appointment.receiptUrl) {
+      Alert.info(
+        'Receipt Not Available',
+        'Your receipt is being generated. Please check back in a few moments or contact support.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
-      // Generate HTML content using the utility
-      const htmlContent = ReceiptPDFGenerator.generateReceiptHTML({
-        appointment,
-        service,
-      });
-
-      // Generate filename
+      // Download receipt from centralized admin-portal URL
       const fileName = `receipt_${appointment.confirmationNumber || appointment.id}.pdf`;
-
-      // Download PDF with progress tracking
+      
+      // Use PDFDownloadManager to download from URL
       await PDFDownloadManager.downloadPDF({
-        htmlContent,
+        htmlContent: '', // Not needed when downloading from URL
         fileName,
         title: 'Appointment Receipt',
         onProgress: (progress) => {
@@ -133,16 +136,18 @@ const BookingSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
         },
         onComplete: (filePath) => {
           console.log(`Receipt downloaded successfully: ${filePath}`);
+          Alert.success('Success', 'Receipt downloaded successfully!', [{ text: 'OK' }]);
         },
         onError: (error) => {
           console.error('Download error:', error);
+          Alert.error('Error', 'Failed to download receipt. Please try again.', [{ text: 'OK' }]);
         },
       });
     } catch (error: any) {
-      console.error('Receipt generation error:', error);
+      console.error('Receipt download error:', error);
       Alert.error(
         'Error',
-        'Failed to generate receipt. Please try again.',
+        'Failed to download receipt. Please try again.',
         [{ text: 'OK' }]
       );
     }

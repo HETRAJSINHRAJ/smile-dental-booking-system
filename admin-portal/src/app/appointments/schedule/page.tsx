@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getAllDocuments, getProviders } from '@/lib/firebase/firestore';
-import type { Appointment, Provider } from '@/types/firebase';
+import type { Appointment, Provider } from '@/types/shared';
 import { toast } from 'sonner';
 
 export default function SchedulePage() {

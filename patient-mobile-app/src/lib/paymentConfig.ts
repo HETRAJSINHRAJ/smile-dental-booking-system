@@ -1,3 +1,10 @@
+import {
+  APPOINTMENT_RESERVATION_FEE,
+  ENABLE_SERVICE_PAYMENT_ONLINE,
+  GST_TAX_RATE,
+  CONVENIENCE_FEE,
+} from '@env';
+
 /**
  * Payment Configuration
  * These values should match the web app configuration
@@ -16,18 +23,18 @@ export interface PaymentConfig {
  */
 export const getPaymentConfig = (): PaymentConfig => {
   // Parse environment variables with fallback defaults
-  const appointmentFee = process.env.APPOINTMENT_RESERVATION_FEE 
-    ? parseInt(process.env.APPOINTMENT_RESERVATION_FEE, 10) 
+  const appointmentFee = APPOINTMENT_RESERVATION_FEE 
+    ? parseInt(APPOINTMENT_RESERVATION_FEE, 10) 
     : 500;
   
-  const enableServicePayment = process.env.ENABLE_SERVICE_PAYMENT_ONLINE === 'true';
+  const enableServicePayment = ENABLE_SERVICE_PAYMENT_ONLINE === 'true';
   
-  const taxRate = process.env.GST_TAX_RATE 
-    ? parseFloat(process.env.GST_TAX_RATE) 
+  const taxRate = GST_TAX_RATE 
+    ? parseFloat(GST_TAX_RATE) 
     : 0.18;
   
-  const convenienceFee = process.env.CONVENIENCE_FEE 
-    ? parseFloat(process.env.CONVENIENCE_FEE) 
+  const convenienceFee = CONVENIENCE_FEE 
+    ? parseFloat(CONVENIENCE_FEE) 
     : 0;
 
   return {

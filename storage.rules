@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Note: Chat files are stored in Uploadcare, not Firebase Storage
+    
+    // Services images - public read, admin write
+    // Note: New uploads use Uploadcare, but legacy files may exist here
+    match /services/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Provider images - public read, admin write
+    // Note: New uploads use Uploadcare, but legacy files may exist here
+    match /providers/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // User avatars - authenticated read, owner write
+    // Note: New uploads use Uploadcare, but legacy files may exist here
+    match /avatars/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Receipts - authenticated read, system write
+    // Note: Receipts are generated server-side and stored in Uploadcare
+    match /receipts/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

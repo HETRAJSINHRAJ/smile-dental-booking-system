@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
     unoptimized: false,
     domains: ["ucarecdn.com", "firebasestorage.googleapis.com"],
   },
+  // Enable compression in production
+  compress: true,
+  // Optimize production builds
+  productionBrowserSourceMaps: false,
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -45,6 +49,10 @@ const nextConfig: NextConfig = {
         loaders: [LOADER],
       },
     },
+  },
+  // Experimental features for performance
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-icons', 'date-fns'],
   },
 };
 

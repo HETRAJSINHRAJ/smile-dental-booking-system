@@ -111,8 +111,20 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
                       (request.resource.data.userId == request.auth.uid || isAdmin());
       
-      // Users can update their own appointments (for cancellation), admins can update all
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Users can update their own appointments with restrictions:
+      // - Can update: status (for cancellation), notes, cancellationReason, reschedule fields
+      // - Cannot update: payment fields, receipt fields (server-side only)
+      // Admins can update all fields
+      allow update: if isAuthenticated() && 
+                       (resource.data.userId == request.auth.uid && 
+                        !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(['receiptUrl', 'receiptGenerated', 'receiptGeneratedAt', 'receiptId', 
+                                   'paymentAmount', 'paymentStatus', 'paymentTransactionId', 
+                                   'servicePaymentAmount', 'servicePaymentStatus']) &&
+                        // Validate reschedule count doesn't exceed max (unless admin)
+                        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['rescheduleCount']) ||
+                         request.resource.data.rescheduleCount <= request.resource.data.get('maxReschedules', 2))) 
+                       || isAdmin();
       
       // Only admins can delete appointments
       allow delete: if isAdmin();
@@ -140,7 +152,20 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
     
-    // Audit logs collection (for data access tracking)
+    // Audit logs collection (for data access tracking and compliance)
+    match /auditLogs/{logId} {
+      // Allow creation of audit logs for authenticated users
+      // This is necessary for tracking all administrative actions
+      allow create: if isAuthenticated();
+      
+      // Only admins can read audit logs (for compliance and monitoring)
+      allow read: if isAdmin();
+      
+      // No one can update or delete audit logs (immutable for compliance)
+      allow update, delete: if false;
+    }
+    
+    // Legacy audit_logs collection (for backward compatibility)
     match /audit_logs/{logId} {
       // Allow creation of audit logs for authenticated users
       allow create: if isAuthenticated();
@@ -179,7 +204,10 @@ service cloud.firestore {
                        resource.data.userId == request.auth.uid;
     }
     
-    // Receipts collection
+    // Receipts collection (optional - currently using appointment document for receipt metadata)
+    // Note: Receipt generation is handled server-side via Admin SDK
+    // Receipt metadata (receiptUrl, receiptGenerated, receiptGeneratedAt, receiptId) 
+    // is stored in the appointments collection and managed by the server
     match /receipts/{receiptId} {
       // Users can read their own receipts, admins can read all
       allow read: if isAuthenticated() && 
@@ -242,6 +270,77 @@ service cloud.firestore {
       
       // Admins can read all preferences
       allow read: if isAdmin();
+    }
+    
+    // Reviews Collection
+    match /reviews/{reviewId} {
+      // Anyone can read approved reviews (for public display on provider profiles)
+      allow read: if resource.data.status == 'approved';
+      
+      // Authenticated users can read their own reviews (any status)
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Admins can read all reviews (for moderation)
+      allow read: if isAdmin();
+      
+      // Authenticated users can create reviews for their own appointments
+      // Reviews must be created with status 'pending'
+      allow create: if isAuthenticated() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.rating >= 1 
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment.size() >= 10;
+      
+      // Users can update their own pending reviews (before approval)
+      // Can only update: rating, comment
+      allow update: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'comment', 'updatedAt']);
+      
+      // Admins can update any review (for moderation and responses)
+      // Can update: status, response, respondedBy, respondedAt
+      allow update: if isAdmin();
+      
+      // Only admins can delete reviews
+      allow delete: if isAdmin();
+    }
+    
+    // Waitlist Collection
+    match /waitlist/{waitlistId} {
+      // Authenticated users can read their own waitlist entries
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Admins can read all waitlist entries
+      allow read: if isAdmin();
+      
+      // Authenticated users can create waitlist entries for themselves
+      // Must include required fields and status must be 'active'
+      allow create: if isAuthenticated() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.keys().hasAll(['userId', 'userName', 'userEmail', 'providerId', 
+                                                  'providerName', 'serviceId', 'serviceName', 
+                                                  'preferredDate', 'preferredTime', 'status', 
+                                                  'createdAt', 'updatedAt']);
+      
+      // Users can update their own waitlist entries
+      // Can only update: status (to 'cancelled'), cancellationReason, cancelledAt
+      allow update: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'cancellationReason', 'cancelledAt', 'updatedAt']);
+      
+      // Admins can update any waitlist entry (for notifications and management)
+      allow update: if isAdmin();
+      
+      // Users can delete their own waitlist entries
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Admins can delete any waitlist entry
+      allow delete: if isAdmin();
     }
   }
 }
